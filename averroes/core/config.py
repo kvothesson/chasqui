@@ -1,0 +1,140 @@
+"""Configuration loading from YAML + environment variables."""
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
+
+import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+@dataclass
+class DeviceConfig:
+    mic: Optional[str] = None        # microphone device name or index
+    speaker: Optional[str] = None    # outward speaker (Japanese person hears this)
+    earphone: Optional[str] = None   # earphone (user hears translation here)
+    ptt_mode: str = "vad"            # vad | hold | toggle
+
+
+@dataclass
+class PairModeConfig:
+    enabled: bool = False
+    role: str = "primary"            # primary | secondary
+    peer_address: Optional[str] = None   # "192.168.x.x:7373"
+
+
+@dataclass
+class LoggingConfig:
+    save_session: bool = False
+    session_dir: Path = field(
+        default_factory=lambda: Path.home() / ".averroes" / "sessions"
+    )
+    show_transcript: bool = True
+
+
+@dataclass
+class Config:
+    # API
+    api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
+    model: str = "gpt-4o-realtime-preview"
+
+    # Translation
+    source_lang: str = "es"
+    target_lang: str = "ja"
+    context: str = ""
+
+    # Adapter
+    adapter: str = "text"            # text | device | virtual-mic | media
+
+    # Voice (GPT-4o Realtime voices)
+    voice: str = "alloy"             # alloy | echo | fable | onyx | nova | shimmer
+
+    # Hardware
+    device: DeviceConfig = field(default_factory=DeviceConfig)
+    pair_mode: PairModeConfig = field(default_factory=PairModeConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
+
+    # VAD tuning
+    vad_threshold: float = 0.5
+    vad_silence_ms: int = 600
+
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def from_yaml(cls, path: Path) -> "Config":
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return cls._from_dict(data)
+
+    @classmethod
+    def _from_dict(cls, d: dict) -> "Config":
+        cfg = cls()
+
+        if api := d.get("api"):
+            cfg.api_key = _resolve_env(api.get("key", cfg.api_key))
+            cfg.model = api.get("model", cfg.model)
+
+        if session := d.get("session"):
+            cfg.source_lang = session.get("source_lang", cfg.source_lang)
+            cfg.target_lang = session.get("target_lang", cfg.target_lang)
+            cfg.context = session.get("context", cfg.context)
+
+        cfg.adapter = d.get("adapter", cfg.adapter)
+        cfg.voice = d.get("voice", cfg.voice)
+        cfg.vad_threshold = d.get("vad_threshold", cfg.vad_threshold)
+        cfg.vad_silence_ms = d.get("vad_silence_ms", cfg.vad_silence_ms)
+
+        if dev := d.get("device"):
+            cfg.device = DeviceConfig(
+                mic=dev.get("mic"),
+                speaker=dev.get("speaker"),
+                earphone=dev.get("earphone"),
+                ptt_mode=dev.get("ptt_mode", "vad"),
+            )
+
+        if pair := d.get("pair_mode"):
+            cfg.pair_mode = PairModeConfig(
+                enabled=pair.get("enabled", False),
+                role=pair.get("role", "primary"),
+                peer_address=pair.get("peer_address"),
+            )
+
+        if log := d.get("logging"):
+            cfg.logging = LoggingConfig(
+                save_session=log.get("save_session", False),
+                session_dir=Path(log.get("session_dir", cfg.logging.session_dir)),
+                show_transcript=log.get("show_transcript", True),
+            )
+
+        return cfg
+
+    def validate(self) -> None:
+        if not self.api_key:
+            raise ValueError(
+                "No API key found. Set OPENAI_API_KEY env var "
+                "or add 'api.key' to your averroes.yaml."
+            )
+
+
+def _resolve_env(value: str) -> str:
+    """Resolve ${ENV_VAR} references in config values."""
+    if value and value.startswith("${") and value.endswith("}"):
+        env_name = value[2:-1]
+        return os.environ.get(env_name, "")
+    return value
+
+
+def find_config() -> Optional[Path]:
+    """Search for averroes.yaml in cwd then home."""
+    candidates = [
+        Path("averroes.yaml"),
+        Path("averroes.yml"),
+        Path.home() / ".averroes" / "config.yaml",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None

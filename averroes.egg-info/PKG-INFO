@@ -1,0 +1,46 @@
+Metadata-Version: 2.4
+Name: averroes
+Version: 0.1.0
+Summary: Real-time simultaneous translation. Speak your language. Be understood.
+License: MIT
+Keywords: translation,real-time,speech,ai,gpt4o
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: openai>=1.40.0
+Requires-Dist: websockets>=12.0
+Requires-Dist: sounddevice>=0.4.6
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: click>=8.1.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+
+# averroes
+
+> *"Averroes, encerrado en el ámbito del Islam, nunca pudo saber el significado de tragedia y comedia."*  
+> — Borges
+
+Real-time simultaneous translation. Speak your language. Be understood.
+
+## Quick start
+
+```bash
+pip install averroes
+export OPENAI_API_KEY=sk-...
+averroes listen --from es --to ja
+```
+
+## Adapters
+
+| Adapter | Use case |
+|---|---|
+| `device` | Physical pendant (mic + speaker) |
+| `virtual-mic` | Google Meet, Zoom, Teams |
+| `media` | YouTube, videos, any system audio |
+| `text` | Silent mode, accessibility |
+
+See [SPEC.md](SPEC.md) for full architecture.

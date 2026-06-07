@@ -1,0 +1,34 @@
+api:
+  key: ${OPENAI_API_KEY}
+  model: gpt-4o-realtime-preview
+
+session:
+  source_lang: es
+  target_lang: ja
+  context: >
+    Tourist in Japan for a honeymoon.
+    Casual everyday conversations: restaurants, transport, shopping, hotels.
+    Translate naturally, not literally. Prefer polite but friendly register.
+
+adapter: device   # text | device | virtual-mic | media
+
+voice: nova       # alloy | echo | fable | onyx | nova | shimmer
+
+vad_threshold: 0.5      # 0.0–1.0, higher = less sensitive
+vad_silence_ms: 600     # ms of silence before processing
+
+device:
+  mic: "USB PnP Audio Device"       # throat mic
+  speaker: "USB Audio"              # outward speaker (Japanese person hears)
+  earphone: "Headphones (Bone)"     # bone conduction (user hears)
+  ptt_mode: vad                     # vad | hold | toggle
+
+pair_mode:
+  enabled: false
+  role: primary                     # primary | secondary
+  peer_address: "192.168.1.x:7373"
+
+logging:
+  save_session: true
+  show_transcript: true
+  session_dir: ~/.averroes/sessions
