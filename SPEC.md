@@ -1,9 +1,9 @@
 # chasqui — Functional Specification
 
-> *"Averroes, encerrado en el ámbito del Islam, nunca pudo saber el significado de tragedia y comedia."*  
-> — Jorge Luis Borges, La busca de Averroes
+> *"El chasqui corría cientos de kilómetros llevando un mensaje que no podía leer.*  
+> *Transmitía sin entender. Conectaba sin pertenecer."*  
 >
-> Este proyecto existe para que ese problema no vuelva a ocurrir.
+> Este proyecto existe para que el mensaje llegue — y esta vez, para que todos lo entiendan.
 
 ---
 
