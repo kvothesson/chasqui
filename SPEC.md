@@ -1,15 +1,15 @@
-# Averroes — Functional Specification
+# chasqui — Functional Specification
 
 > *"Averroes, encerrado en el ámbito del Islam, nunca pudo saber el significado de tragedia y comedia."*  
 > — Jorge Luis Borges, La busca de Averroes
 >
-> Este dispositivo existe para que ese problema no vuelva a ocurrir.
+> Este proyecto existe para que ese problema no vuelva a ocurrir.
 
 ---
 
 ## 1. Visión
 
-**Averroes** es un sistema de traducción en tiempo real, de código abierto, que se comporta como un intérprete simultáneo personal.
+**chasqui** es un sistema de traducción en tiempo real, de código abierto, que se comporta como un intérprete simultáneo personal.
 
 El objetivo de experiencia es uno solo: **hablar en tu idioma con alguien que no lo habla, con la misma naturalidad que si hubiera un intérprete humano al lado.**
 
@@ -21,13 +21,19 @@ No es una app de traducción. No es un diccionario. Es una capa de lenguaje que 
 
 | Nombre | Qué es |
 |---|---|
-| **averroes** | El core open source. La librería. El engine. Cualquiera lo instala. |
-| **nyx** | El dispositivo físico (el medallón). Usa el adapter `device` de averroes. |
+| **chasqui** | El core open source. La librería. El engine. Cualquiera lo instala. |
+| **eco** | El dispositivo físico (el medallón). Usa el adapter `device` de chasqui. |
 
-Nyx en el universo Kvothesson: unidad de suspensión, infiltración, sigilo, manipulación de entornos. Exactamente lo que hace — se infiltra en una conversación en un idioma ajeno y la hace funcionar.
+**chasqui** — del universo Kvothesson / NODO_QUIPU. El mensajero que atraviesa todos los nodos, habla todos los idiomas para conectarlos. Técnico, veloz, invisible. No pertenece a ningún nodo — los conecta a todos.
 
-Cuando alguien lo compra en MercadoLibre compra un **Nyx**.  
-Cuando alguien lo buildea desde cero clona **averroes**.
+**eco** — el sonido que vuelve traducido. Lo que decís en un idioma regresa en otro. El nombre más simple para lo que hace.
+
+Cuando alguien lo compra en MercadoLibre compra un **eco**.  
+Cuando alguien lo buildea desde cero clona **chasqui**.
+
+```bash
+chasqui listen --adapter eco
+```
 
 ---
 
@@ -36,7 +42,7 @@ Cuando alguien lo buildea desde cero clona **averroes**.
 **Modelo:** `gpt-realtime-translate` (mayo 2026)
 - Endpoint: `wss://api.openai.com/v1/realtime/translations`
 - Precio: **$0.034/minuto** de audio
-- 70+ idiomas de entrada, detección automática
+- 70+ idiomas de entrada, detección automática de idioma
 - Sin prompting personalizado, sin selección de voz
 - Costo estimado viaje 14 días Japón (30 min/día): **~$14 total**
 
@@ -46,7 +52,7 @@ Cuando alguien lo buildea desde cero clona **averroes**.
 - Soporta instrucciones personalizadas y selección de voz
 
 **Detección automática de idioma:**
-El modelo detecta el idioma de entrada automáticamente. Si el input ya está en el idioma destino (ej: dos personas con Nyx hablando español), el modelo hace pass-through sin traducción real. Costo idéntico — no vale la pena optimizar.
+El modelo detecta el idioma de entrada automáticamente. Si el input ya está en el idioma destino (ej: dos personas con eco hablando español), el modelo hace pass-through. Costo idéntico — no vale la pena optimizar.
 
 ---
 
@@ -82,7 +88,7 @@ El modelo detecta el idioma de entrada automáticamente. Si el input ya está en
 │   AudioInput ──► Pipeline ──► AudioOutput               │
 │                     │                                   │
 │              gpt-realtime-translate                     │
-│              WebSocket session                          │
+│              WebSocket / translations endpoint          │
 │                                                         │
 │   - Language pair (source detectado, target configurado)│
 │   - Voice Activity Detection (server-side VAD)          │
@@ -97,8 +103,8 @@ El modelo detecta el idioma de entrada automáticamente. Si el input ya está en
 ### 6.1 `text` — Teclado → Terminal
 Usa Chat Completions (no Realtime). Para testing, modo silencioso, piping.
 ```bash
-averroes translate "¿Dónde está el baño?"
-echo "gracias" | averroes translate --from es --to ja
+chasqui translate "¿Dónde está el baño?"
+echo "gracias" | chasqui translate --from es --to ja
 ```
 **Estado: ✅ funciona**
 
@@ -113,13 +119,12 @@ Requiere VB-Audio Cable (Windows) o BlackHole (macOS).
 
 ---
 
-### 6.3 `meet` — Google Meet bidireccional ⏳
+### 6.3 `meet` — Google Meet bidireccional
 Dos pipelines corriendo en paralelo:
 ```
-pipeline OUT: tu mic real   → ES→JA → CABLE Input    (ellos te escuchan en japonés)
-pipeline IN:  audio de Meet → JA→ES → bone conduction (vos escuchás en español)
+pipeline OUT: tu mic real   → ES→JA → CABLE Input     (ellos te escuchan en japonés)
+pipeline IN:  audio de Meet → JA→ES → bone conduction  (vos escuchás en español)
 ```
-El audio de Meet se captura por loopback del sistema.  
 **Estado: por implementar**
 
 ---
@@ -133,35 +138,35 @@ Modos: `dub` | `subtitle` | `both`
 
 ---
 
-### 6.5 `device` — Hardware físico Nyx (bidireccional)
+### 6.5 `device` — Hardware físico eco (bidireccional)
 
 El pendant tiene **dos micrófonos y dos salidas**:
 
 ```
-PENDANT (Nyx)
-├── throat mic  → pipeline ES→JA → speaker outward    (japonés escucha)
-└── ambient mic → pipeline JA→ES → bone conduction    (vos escuchás)
+ECO (pendant)
+├── throat mic  → pipeline ES→JA → speaker outward    (interlocutor escucha)
+└── ambient mic → pipeline JA→ES → bone conduction    (usuario escucha)
 ```
 
 - **Throat mic**: capta vibración ósea de tu voz, ignora el ambiente y el speaker outward
-- **Ambient mic**: capta al japonés hablando, ignora tu voz (ya sale por el throat)
-- **Speaker outward**: el japonés escucha la traducción sin auricular
-- **Bone conduction**: vos escuchás la traducción sin bloquear el oído
+- **Ambient mic**: capta al interlocutor hablando
+- **Speaker outward**: el interlocutor escucha la traducción sin auricular
+- **Bone conduction**: el usuario escucha la traducción sin bloquear el oído
 
 Los dos pipelines corren en paralelo. El celu va en el bolsillo, no se toca.
 
-**Pair mode (x2 dispositivos):**
-- Device A habla → pipeline A traduce → speaker A
-- Device B habla → pipeline B traduce → speaker B
-- Coordinación: cuando A está outputeando, B silencia su ambient mic 500ms para evitar feedback
+**Pair mode (x2 dispositivos, pareja de viajeros):**
+- eco A habla → pipeline A traduce → speaker A
+- eco B habla → pipeline B traduce → speaker B
+- Coordinación: cuando A outputea, B silencia su ambient mic 500ms para evitar feedback
 
 **Estado: implementado básico, falta bidireccional**
 
 ---
 
-## 7. Hardware Nyx — Opción A (phone as brain)
+## 7. Hardware eco — Opción A (phone as brain)
 
-El celu corre averroes. El pendant es periférico de audio.
+El celu corre chasqui. El pendant es periférico de audio.
 
 ### Componentes
 
@@ -172,7 +177,7 @@ El celu corre averroes. El pendant es periférico de audio.
 | Speaker 8Ω 2W + PAM8403 amp | Salida outward | $8 USD |
 | Bone conduction BT | Canal privado del usuario | $50 USD |
 | USB-C hub con audio + PD | Conecta mic + speaker al celu | $25 USD |
-| Enclosure 3D printed | El medallón | $15 USD |
+| Enclosure 3D printed | El medallón eco | $15 USD |
 | **Total** | | **~$123 USD** |
 
 ### Herramientas necesarias
@@ -181,7 +186,7 @@ El celu corre averroes. El pendant es periférico de audio.
 - Multímetro
 - Cables dupont + termocontraíble
 
-### Diseño del enclosure (Nyx)
+### Diseño del enclosure (eco)
 - ~35mm × 12mm, aluminio negro mate
 - Cristal hexagonal grabado (universo Kvothesson)
 - Speaker grille honeycomb en frente
@@ -209,15 +214,15 @@ El celu corre averroes. El pendant es periférico de audio.
 ## 9. CLI
 
 ```bash
-averroes translate "¿Dónde está la estación?"   # texto, una frase
-averroes listen --from es --to ja               # interactivo texto
-averroes listen --adapter virtual-mic           # Meet unidireccional
-averroes listen --adapter meet                  # Meet bidireccional
-averroes listen --adapter device                # hardware Nyx
-averroes listen --adapter media                 # YouTube/videos
-averroes devices                                # listar dispositivos
-averroes langs                                  # listar idiomas
-averroes init                                   # generar config
+chasqui translate "¿Dónde está la estación?"   # texto, una frase
+chasqui listen --from es --to ja               # interactivo texto
+chasqui listen --adapter virtual-mic           # Meet unidireccional
+chasqui listen --adapter meet                  # Meet bidireccional
+chasqui listen --adapter device                # hardware eco
+chasqui listen --adapter media                 # YouTube/videos
+chasqui devices                                # listar dispositivos
+chasqui langs                                  # listar idiomas
+chasqui init                                   # generar config
 ```
 
 ---
@@ -225,8 +230,8 @@ averroes init                                   # generar config
 ## 10. Mercado
 
 **Lo que existe en 2026:**
-- Timekettle W4 Pro, Soundcore AeroFit 2, Kentfaith — auriculares de traducción
-- Requieren auricular en el interlocutor, o celu en la mesa, o modo face-to-face
+- Timekettle W4 Pro, Soundcore AeroFit 2 — auriculares de traducción
+- Requieren auricular en el interlocutor, o celu en la mesa
 - Pendants AI (Meta/Limitless, Taya) — graban, no traducen
 
 **Lo que no existe:** pendant autónomo con speaker outward + canal privado + throat mic donde ambas personas participan sin tocar nada y sin que el interlocutor use ningún dispositivo.
@@ -238,17 +243,15 @@ averroes init                                   # generar config
 ## 11. Open Source / Producto
 
 - **Licencia**: MIT
-- **GitHub**: averroes (core) — cualquiera lo fork, contribuye, adapta
+- **GitHub**: chasqui (core) — cualquiera lo fork, contribuye, adapta
 - **Hardware**: STL files + BOM en `/hardware`
-- **MercadoLibre**: venta de Nyx ensamblado usando este mismo código
-- **Modelo de negocio**: hardware (Nyx) + opcional suscripción con API incluida
+- **MercadoLibre**: venta de eco ensamblado usando este mismo código
+- **Modelo de negocio**: hardware (eco) + opcional suscripción con API incluida
 
 ---
 
-## 12. Nombre y Referencia
+## 12. Referencia
 
-**Averroes** (Ibn Rushd, 1126–1198) intentó comentar a Aristóteles sin haber visto nunca una obra de teatro griega. No podía traducir "tragedia" ni "comedia" porque no existían en su mundo cultural. Borges lo usó para hablar de los límites del lenguaje.
+**chasqui** — en el universo Kvothesson / NODO_QUIPU, el mensajero que traversa todos los nodos de la red argentina. No pertenece a ningún idioma. Los conecta a todos.
 
-Este proyecto lleva su nombre como recordatorio de que la traducción perfecta no existe — solo existe la comprensión suficiente para que dos personas se entiendan.
-
-**Nyx** — unidad de suspensión del universo Kvothesson. Infiltración, sigilo, manipulación de entornos. Se infiltra en una conversación en un idioma ajeno y la hace funcionar. Asimétrica, fluida, núcleo expuesto.
+**eco** — el sonido que vuelve. Lo que decís en un idioma regresa en otro, en tiempo real, desde el pendant que llevás al cuello.
