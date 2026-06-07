@@ -1,0 +1,32 @@
+api:
+  key: ${OPENAI_API_KEY}
+  model: gpt-4o-realtime-preview
+
+session:
+  source_lang: es
+  target_lang: ja
+  context: >
+    Tourist in Japan for a honeymoon.
+    Casual everyday conversations: restaurants, transport, shopping.
+    Translate naturally, not literally.
+
+adapter: text   # text | device | virtual-mic | media
+
+voice: alloy    # alloy | echo | fable | onyx | nova | shimmer
+
+# Uncomment and fill for physical device:
+# device:
+#   mic: "USB PnP Audio Device"
+#   speaker: "USB Audio"
+#   earphone: "Headphones"
+#   ptt_mode: vad
+
+# Uncomment for two-device pair mode:
+# pair_mode:
+#   enabled: false
+#   role: primary
+#   peer_address: "192.168.1.x:7373"
+
+logging:
+  save_session: true
+  show_transcript: true
