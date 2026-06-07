@@ -55,14 +55,19 @@ class BaseAdapter(abc.ABC):
     def _print_event(self, event: TranslationEvent) -> None:
         src = self.config.source_lang.upper()
         tgt = self.config.target_lang.upper()
-        print(f"\n  [{src}] {event.source_text}")
-        print(f"  [{tgt}] {event.target_text}")
-        print(f"        {event.latency_ms:.0f}ms")
+        def _p(msg: str) -> None:
+            try:
+                print(msg, flush=True)
+            except UnicodeEncodeError:
+                print(msg.encode("ascii", errors="replace").decode(), flush=True)
+        _p(f"\n  [{src}] {event.source_text}")
+        _p(f"  [{tgt}] {event.target_text}")
+        _p(f"        {event.latency_ms:.0f}ms")
 
     def _print_header(self, adapter_name: str) -> None:
         src = LANG_NAMES.get(self.config.source_lang, self.config.source_lang)
         tgt = LANG_NAMES.get(self.config.target_lang, self.config.target_lang)
-        print(f"\nAverroes — {adapter_name}")
+        print(f"\nChasqui — {adapter_name}")
         print(f"  {src} → {tgt}")
         print(f"  Voice: {self.config.voice}")
         print()

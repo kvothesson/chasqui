@@ -17,7 +17,7 @@ from .base import BaseAdapter
 
 # Substrings to detect virtual audio devices by platform
 _VIRTUAL_HINTS: dict[str, list[str]] = {
-    "win32":  ["CABLE Input", "VB-Audio", "Virtual Cable"],
+    "win32":  ["CABLE Input"],
     "darwin": ["BlackHole", "Loopback", "Soundflower"],
     "linux":  ["pulse", "monitor"],
 }
@@ -72,7 +72,8 @@ class VirtualMicAdapter(BaseAdapter):
             for device in sd.query_devices():
                 name: str = device["name"]
                 if any(hint.lower() in name.lower() for hint in hints):
-                    return name
+                    if device["max_output_channels"] > 0:
+                        return name
         except Exception:
             pass
 

@@ -10,8 +10,8 @@ import sys
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
-from averroes.core.config import Config
-from averroes.adapters.text import TextAdapter
+from chasqui.core.config import Config
+from chasqui.adapters.text import TextAdapter
 
 PHRASES = [
     "Hola, ¿dónde está el baño?",

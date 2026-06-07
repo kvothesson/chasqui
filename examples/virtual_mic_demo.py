@@ -16,8 +16,8 @@ import sys
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent))
 
-from averroes.core.config import Config
-from averroes.adapters.virtual_mic import VirtualMicAdapter
+from chasqui.core.config import Config
+from chasqui.adapters.virtual_mic import VirtualMicAdapter
 
 
 def main():

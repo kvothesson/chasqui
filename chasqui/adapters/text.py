@@ -1,7 +1,7 @@
 """Text adapter — keyboard in, terminal out.
 
 Uses standard Chat Completions (not Realtime) for simplicity.
-Best for: testing, silent mode, piping (echo "hola" | averroes translate).
+Best for: testing, silent mode, piping (echo "hola" | chasqui translate).
 """
 
 import sys
