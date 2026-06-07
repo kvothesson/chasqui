@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "averroes"
+name = "chasqui"
 version = "0.1.0"
 description = "Real-time simultaneous translation. Speak your language. Be understood."
 readme = "README.md"
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-averroes = "averroes.cli:cli"
+chasqui = "chasqui.cli:cli"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "black", "ruff"]

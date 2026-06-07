@@ -31,4 +31,4 @@ pair_mode:
 logging:
   save_session: true
   show_transcript: true
-  session_dir: ~/.averroes/sessions
+  session_dir: ~/.chasqui/sessions

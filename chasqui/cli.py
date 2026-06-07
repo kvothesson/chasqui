@@ -1,8 +1,14 @@
-"""Averroes CLI — entry point for all commands."""
+"""Chasqui CLI — entry point for all commands."""
 
 import sys
+import io
 from pathlib import Path
 from typing import Optional
+
+# Force UTF-8 output on Windows so Japanese/CJK characters don't crash
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 import click
 
@@ -24,10 +30,11 @@ def _load_config(config_path: Optional[str], **overrides) -> Config:
 
 def _run_adapter(cfg: Config) -> None:
     adapter_map = {
-        "text":        "averroes.adapters.text.TextAdapter",
-        "device":      "averroes.adapters.device.DeviceAdapter",
-        "virtual-mic": "averroes.adapters.virtual_mic.VirtualMicAdapter",
-        "media":       "averroes.adapters.media.MediaAdapter",
+        "text":        "chasqui.adapters.text.TextAdapter",
+        "device":      "chasqui.adapters.device.DeviceAdapter",
+        "virtual-mic": "chasqui.adapters.virtual_mic.VirtualMicAdapter",
+        "media":       "chasqui.adapters.media.MediaAdapter",
+        "bridge":      "chasqui.adapters.bridge.BridgeAdapter",
     }
 
     module_path = adapter_map.get(cfg.adapter)
@@ -48,9 +55,9 @@ def _run_adapter(cfg: Config) -> None:
 # ---------------------------------------------------------------------------
 
 @click.group()
-@click.version_option(package_name="averroes")
+@click.version_option(package_name="chasqui")
 def cli():
-    """Averroes — Real-time simultaneous translation.
+    """Chasqui — Real-time simultaneous translation.
 
     \b
     Speak your language. Be understood.
@@ -58,7 +65,7 @@ def cli():
     \b
     Quick start:
       export OPENAI_API_KEY=sk-...
-      averroes listen --from es --to ja
+      chasqui listen --from es --to ja
     """
     pass
 
@@ -73,7 +80,7 @@ def cli():
 @click.option("--to", "target_lang", default=None, metavar="LANG",
               help="Target language code")
 @click.option("--adapter", default=None,
-              type=click.Choice(["text", "device", "virtual-mic", "media"]),
+              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge"]),
               help="Input/output adapter (default: text)")
 @click.option("--voice", default=None,
               type=click.Choice(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]),
@@ -81,15 +88,15 @@ def cli():
 @click.option("--context", default=None,
               help="Conversation context (e.g. 'Tourist in Japan, casual conversation')")
 @click.option("--config", "config_path", default=None,
-              help="Path to averroes.yaml")
+              help="Path to chasqui.yaml")
 def listen(source_lang, target_lang, adapter, voice, context, config_path):
     """Start real-time audio translation.
 
     \b
     Examples:
-      averroes listen                          # es→ja, text adapter
-      averroes listen --from es --to ja --adapter virtual-mic
-      averroes listen --adapter device --voice nova
+      chasqui listen                          # es→ja, text adapter
+      chasqui listen --from es --to ja --adapter virtual-mic
+      chasqui listen --adapter device --voice nova
     """
     cfg = _load_config(
         config_path,
@@ -119,8 +126,8 @@ def translate(text, source_lang, target_lang, config_path):
 
     \b
     Examples:
-      averroes translate "dónde está el baño"
-      echo "gracias" | averroes translate --from es --to ja
+      chasqui translate "dónde está el baño"
+      echo "gracias" | chasqui translate --from es --to ja
     """
     cfg = _load_config(
         config_path,
@@ -166,13 +173,13 @@ def devices():
         if any(h in nl for h in ["stereo mix", "what u hear", "monitor"]):
             tags.append("loopback")
 
-        tag_str = f"  ← {', '.join(tags)}" if tags else ""
+        tag_str = f"  << {', '.join(tags)}" if tags else ""
         ins = d["max_input_channels"]
         outs = d["max_output_channels"]
         click.echo(f"  [{i:2d}] {name}  (in:{ins} out:{outs}){tag_str}")
 
     click.echo()
-    click.echo("Tip: use the device name or index in averroes.yaml > device.mic / device.speaker")
+    click.echo("Tip: use the device name or index in chasqui.yaml > device.mic / device.speaker")
 
 
 @cli.command()
@@ -185,9 +192,9 @@ def langs():
 
 
 @cli.command()
-@click.option("--out", default="averroes.yaml", help="Output path")
+@click.option("--out", default="chasqui.yaml", help="Output path")
 def init(out):
-    """Generate a starter averroes.yaml config file."""
+    """Generate a starter chasqui.yaml config file."""
     template = """\
 api:
   key: ${OPENAI_API_KEY}
@@ -227,4 +234,4 @@ logging:
         click.confirm(f"{out} already exists. Overwrite?", abort=True)
     path.write_text(template, encoding="utf-8")
     click.echo(f"Created {out}")
-    click.echo("Set your OPENAI_API_KEY env var and run: averroes listen")
+    click.echo("Set your OPENAI_API_KEY env var and run: chasqui listen")

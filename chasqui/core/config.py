@@ -30,7 +30,7 @@ class PairModeConfig:
 class LoggingConfig:
     save_session: bool = False
     session_dir: Path = field(
-        default_factory=lambda: Path.home() / ".averroes" / "sessions"
+        default_factory=lambda: Path.home() / ".chasqui" / "sessions"
     )
     show_transcript: bool = True
 
@@ -115,7 +115,7 @@ class Config:
         if not self.api_key:
             raise ValueError(
                 "No API key found. Set OPENAI_API_KEY env var "
-                "or add 'api.key' to your averroes.yaml."
+                "or add 'api.key' to your chasqui.yaml."
             )
 
 
@@ -128,11 +128,11 @@ def _resolve_env(value: str) -> str:
 
 
 def find_config() -> Optional[Path]:
-    """Search for averroes.yaml in cwd then home."""
+    """Search for chasqui.yaml in cwd then home."""
     candidates = [
-        Path("averroes.yaml"),
-        Path("averroes.yml"),
-        Path.home() / ".averroes" / "config.yaml",
+        Path("chasqui.yaml"),
+        Path("chasqui.yml"),
+        Path.home() / ".chasqui" / "config.yaml",
     ]
     for p in candidates:
         if p.exists():
