@@ -22,3 +22,4 @@ CHUNK_FRAMES = SAMPLE_RATE * CHUNK_MS // 1000          # 2400 frames
 CHUNK_SIZE = CHUNK_FRAMES * CHANNELS * SAMPLE_WIDTH    # 4800 bytes
 
 REALTIME_URL = "wss://api.openai.com/v1/realtime"
+REALTIME_TRANSLATE_URL = "wss://api.openai.com/v1/realtime/translations"
