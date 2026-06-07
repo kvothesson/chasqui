@@ -17,30 +17,63 @@ No es una app de traducción. No es un diccionario. Es una capa de lenguaje que 
 
 ---
 
-## 2. Principios de Diseño
+## 2. Naming
 
-- **Core agnóstico**: el núcleo no sabe de dónde viene el audio ni adónde va
-- **Adapters como ciudadanos de primera clase**: cada superficie (dispositivo físico, meet, video, texto) es un adapter intercambiable
-- **Latencia sobre calidad**: 300ms con voz aceptable > 2s con voz perfecta
-- **Open source sin fricción**: una API key y funciona; sin servidores propios requeridos
-- **Combinable**: los adapters se pueden componer (ej: capturar de YouTube y outputear al dispositivo físico simultáneamente)
+| Nombre | Qué es |
+|---|---|
+| **averroes** | El core open source. La librería. El engine. Cualquiera lo instala. |
+| **nyx** | El dispositivo físico (el medallón). Usa el adapter `device` de averroes. |
+
+Nyx en el universo Kvothesson: unidad de suspensión, infiltración, sigilo, manipulación de entornos. Exactamente lo que hace — se infiltra en una conversación en un idioma ajeno y la hace funcionar.
+
+Cuando alguien lo compra en MercadoLibre compra un **Nyx**.  
+Cuando alguien lo buildea desde cero clona **averroes**.
 
 ---
 
-## 3. Arquitectura
+## 3. Modelo y Costo
+
+**Modelo:** `gpt-realtime-translate` (mayo 2026)
+- Endpoint: `wss://api.openai.com/v1/realtime/translations`
+- Precio: **$0.034/minuto** de audio
+- 70+ idiomas de entrada, detección automática
+- Sin prompting personalizado, sin selección de voz
+- Costo estimado viaje 14 días Japón (30 min/día): **~$14 total**
+
+**Fallback:** `gpt-realtime` (general)
+- Endpoint: `wss://api.openai.com/v1/realtime`
+- Precio: $0.18–0.46/minuto
+- Soporta instrucciones personalizadas y selección de voz
+
+**Detección automática de idioma:**
+El modelo detecta el idioma de entrada automáticamente. Si el input ya está en el idioma destino (ej: dos personas con Nyx hablando español), el modelo hace pass-through sin traducción real. Costo idéntico — no vale la pena optimizar.
+
+---
+
+## 4. Principios de Diseño
+
+- **Core agnóstico**: el núcleo no sabe de dónde viene el audio ni adónde va
+- **Adapters como ciudadanos de primera clase**: cada superficie es un adapter intercambiable
+- **Latencia sobre calidad**: 300ms con voz aceptable > 2s con voz perfecta
+- **Open source sin fricción**: una API key y funciona; sin servidores propios requeridos
+- **Combinable**: los adapters se pueden componer y correr en paralelo
+- **Bidireccional por defecto**: toda conversación real es en dos direcciones
+
+---
+
+## 5. Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    INTERFACE LAYER                      │
 │                                                         │
-│  DeviceAdapter │ VirtualMicAdapter │ MediaAdapter │ ... │
+│  device │ virtual-mic │ media │ meet │ text             │
 │                                                         │
 │  Input Sources          Output Destinations             │
-│  - Throat mic           - Physical speaker              │
-│  - System mic           - Virtual mic (VB-Cable)        │
-│  - System audio         - Earphone / bone conduction    │
+│  - Throat mic           - Physical speaker (outward)    │
+│  - Ambient mic          - Virtual mic (VB-Cable)        │
+│  - System audio         - Bone conduction (private)     │
 │  - Text / stdin         - Text / stdout                 │
-│  - WebSocket stream     - File / recording              │
 └──────────────────────────┬──────────────────────────────┘
                            │  AudioStream (abstract)
 ┌──────────────────────────▼──────────────────────────────┐
@@ -48,210 +81,113 @@ No es una app de traducción. No es un diccionario. Es una capa de lenguaje que 
 │                                                         │
 │   AudioInput ──► Pipeline ──► AudioOutput               │
 │                     │                                   │
-│              GPT-4o Realtime                            │
+│              gpt-realtime-translate                     │
 │              WebSocket session                          │
 │                                                         │
-│   - Manages language pair (source → target)             │
-│   - Manages conversation context                        │
-│   - Handles turn detection                              │
-│   - Streams audio bidirectionalmente                    │
+│   - Language pair (source detectado, target configurado)│
+│   - Voice Activity Detection (server-side VAD)          │
+│   - SpeakerStream: background thread + queue            │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Core
+## 6. Adapters
 
-### 4.1 Pipeline
-
-El `Pipeline` es la unidad central. Recibe un `AudioStream` de entrada y produce un `AudioStream` de salida.
-
-```python
-pipeline = Pipeline(
-    source_lang="es",
-    target_lang="ja",
-    model="gpt-4o-realtime",
-    api_key="...",
-)
-
-pipeline.run(input_stream, output_stream)
-```
-
-Internamente gestiona:
-- La conexión WebSocket con GPT-4o Realtime
-- El contexto de conversación (historial de la sesión)
-- Voice Activity Detection (VAD) para saber cuándo habló alguien
-- Turn-taking: bloquear el mic mientras habla el output para evitar feedback
-
-### 4.2 AudioStream
-
-Abstracción mínima sobre cualquier fuente o destino de audio.
-
-```python
-class AudioStream:
-    def read(self, chunk_size: int) -> bytes: ...  # PCM 16-bit, 24kHz
-    def write(self, data: bytes) -> None: ...
-    def close(self) -> None: ...
-```
-
-### 4.3 Sesión
-
-Una `Session` encapsula un intercambio completo (ej: una conversación en un restaurante). Tiene:
-- Idiomas configurados
-- Contexto acumulado (para que el modelo mantenga coherencia)
-- Log de lo que se dijo en ambos idiomas
-- Estado: `idle` | `listening` | `translating` | `speaking`
-
-### 4.4 Pair Mode
-
-Cuando hay dos dispositivos (ej: pareja de viajeros), la sesión soporta **dual-channel mode**:
-- Device A habla → traduce hacia el japonés → speaker A
-- Device B habla → traduce hacia el japonés → speaker B
-- Cuando A está hablando, B silencia su mic por 500ms post-output para evitar capturar el speaker de A
-- Coordinación por WebSocket local (LAN) o por canal dedicado en la sesión Realtime
-
----
-
-## 5. Adapters
-
-### 5.1 DeviceAdapter
-Para el hardware físico (el medallón).
-
-```python
-adapter = DeviceAdapter(
-    mic_device_id="throat_mic_usb",
-    speaker_device_id="pendant_speaker",
-    earphone_device_id="bone_conduction",
-    ptt_gpio_pin=17,          # Push-to-talk button
-)
-```
-
-- Input: micrófono de garganta USB
-- Output A: speaker frontal (lo escucha el japonés)
-- Output B: auricular de conducción ósea (lo escucha el usuario)
-- PTT: botón físico activa la captura
-
-### 5.2 VirtualMicAdapter
-Para Google Meet, Zoom, Teams, cualquier app de videollamada.
-
-```python
-adapter = VirtualMicAdapter(
-    real_mic_device_id="default",
-    virtual_mic_device_id="CABLE Input (VB-Audio)",  # Windows
-    # virtual_mic_device_id="BlackHole 2ch"          # macOS
-    earphone_device_id="default_headphones",
-)
-```
-
-Flujo:
-1. Captura el micrófono real del usuario
-2. Traduce ES → JA en tiempo real
-3. Inyecta el audio traducido en el micrófono virtual
-4. Google Meet transmite el audio traducido a los participantes
-5. El audio de los participantes japoneses llega por los auriculares, traducido JA → ES
-
-Requiere: VB-Audio Cable (Windows) o BlackHole (macOS) — gratuitos.
-
-### 5.3 MediaAdapter
-Para YouTube, Netflix, videos locales. Traduce lo que se escucha.
-
-```python
-adapter = MediaAdapter(
-    system_audio_device="Stereo Mix",  # Windows
-    # system_audio_device="BlackHole" # macOS (loopback)
-    output_device="default_headphones",
-    mode="subtitle",      # "subtitle" | "dub" | "both"
-)
-```
-
-Modos:
-- `subtitle`: genera texto en tiempo real (sin audio adicional)
-- `dub`: reemplaza el audio con la traducción hablada
-- `both`: texto + audio simultáneo
-
-### 5.4 TextAdapter
-Para uso silencioso, accesibilidad o testing.
-
-```python
-adapter = TextAdapter(
-    input_mode="keyboard",   # "keyboard" | "stdin" | "file"
-    output_mode="terminal",  # "terminal" | "stdout" | "file"
-    show_both_langs=True,
-)
-```
-
-### 5.5 CLIAdapter
-Para pipes y scripting.
-
+### 6.1 `text` — Teclado → Terminal
+Usa Chat Completions (no Realtime). Para testing, modo silencioso, piping.
 ```bash
-echo "hola, dónde está la estación?" | averroes translate --from es --to ja
-averroes listen --adapter virtual-mic --from es --to ja
-averroes run --config ./config.yaml
+averroes translate "¿Dónde está el baño?"
+echo "gracias" | averroes translate --from es --to ja
 ```
+**Estado: ✅ funciona**
 
 ---
 
-## 6. Configuración
-
-Archivo `averroes.yaml` en el root del proyecto o en `~/.averroes/config.yaml`:
-
-```yaml
-api:
-  provider: openai             # openai | anthropic (futuro)
-  key: ${OPENAI_API_KEY}
-  model: gpt-4o-realtime-preview
-
-session:
-  source_lang: es
-  target_lang: ja
-  context: |
-    Somos turistas argentinos en Japón.
-    El contexto es conversación cotidiana: restaurantes, transporte, compras.
-    Traducir de manera natural, no literal.
-
-adapter: device               # device | virtual-mic | media | text | cli
-
-device:
-  mic: "USB PnP Audio Device"
-  speaker: "USB Audio"
-  earphone: "Headphones"
-  ptt_mode: hold              # hold | toggle | vad
-
-pair_mode:
-  enabled: false
-  role: primary               # primary | secondary
-  peer_address: "192.168.1.x:7373"
-
-logging:
-  save_session: true
-  session_dir: ~/.averroes/sessions
-  language: both              # source | target | both
+### 6.2 `virtual-mic` — Google Meet / Zoom / Teams (unidireccional)
 ```
+tu mic real → pipeline ES→JA → CABLE Input → Meet transmite japonés
+```
+Requiere VB-Audio Cable (Windows) o BlackHole (macOS).  
+**Estado: ✅ funciona**
 
 ---
 
-## 7. Interfaces de Superficie (futura capa UI)
+### 6.3 `meet` — Google Meet bidireccional ⏳
+Dos pipelines corriendo en paralelo:
+```
+pipeline OUT: tu mic real   → ES→JA → CABLE Input    (ellos te escuchan en japonés)
+pipeline IN:  audio de Meet → JA→ES → bone conduction (vos escuchás en español)
+```
+El audio de Meet se captura por loopback del sistema.  
+**Estado: por implementar**
 
-El core expone un servidor WebSocket local (`localhost:7373`) que cualquier interfaz puede consumir:
+---
 
-```json
-// Evento: traducción completada
-{
-  "type": "translation",
-  "source_lang": "es",
-  "target_lang": "ja",
-  "source_text": "¿Dónde está el baño?",
-  "target_text": "トイレはどこですか？",
-  "audio_url": "data:audio/pcm;base64,...",
-  "latency_ms": 410
-}
+### 6.4 `media` — YouTube / Videos / Streams
+```
+audio del sistema (loopback) → pipeline JA→ES → auriculares
+```
+Modos: `dub` | `subtitle` | `both`  
+**Estado: implementado, no probado**
+
+---
+
+### 6.5 `device` — Hardware físico Nyx (bidireccional)
+
+El pendant tiene **dos micrófonos y dos salidas**:
+
+```
+PENDANT (Nyx)
+├── throat mic  → pipeline ES→JA → speaker outward    (japonés escucha)
+└── ambient mic → pipeline JA→ES → bone conduction    (vos escuchás)
 ```
 
-Esto permite:
-- Una UI web (React) corriendo en el celu que muestra el texto en tiempo real
-- Una extensión de Chrome que intercepta audio del browser
-- Un overlay en el escritorio
-- Una app mobile nativa
+- **Throat mic**: capta vibración ósea de tu voz, ignora el ambiente y el speaker outward
+- **Ambient mic**: capta al japonés hablando, ignora tu voz (ya sale por el throat)
+- **Speaker outward**: el japonés escucha la traducción sin auricular
+- **Bone conduction**: vos escuchás la traducción sin bloquear el oído
+
+Los dos pipelines corren en paralelo. El celu va en el bolsillo, no se toca.
+
+**Pair mode (x2 dispositivos):**
+- Device A habla → pipeline A traduce → speaker A
+- Device B habla → pipeline B traduce → speaker B
+- Coordinación: cuando A está outputeando, B silencia su ambient mic 500ms para evitar feedback
+
+**Estado: implementado básico, falta bidireccional**
+
+---
+
+## 7. Hardware Nyx — Opción A (phone as brain)
+
+El celu corre averroes. El pendant es periférico de audio.
+
+### Componentes
+
+| Componente | Función | Precio aprox |
+|---|---|---|
+| Throat mic USB | Captura voz del usuario | $20 USD |
+| Mic ambiente pequeño | Captura voz del interlocutor | $5 USD |
+| Speaker 8Ω 2W + PAM8403 amp | Salida outward | $8 USD |
+| Bone conduction BT | Canal privado del usuario | $50 USD |
+| USB-C hub con audio + PD | Conecta mic + speaker al celu | $25 USD |
+| Enclosure 3D printed | El medallón | $15 USD |
+| **Total** | | **~$123 USD** |
+
+### Herramientas necesarias
+- Soldador + estaño
+- Pistola de silicona caliente
+- Multímetro
+- Cables dupont + termocontraíble
+
+### Diseño del enclosure (Nyx)
+- ~35mm × 12mm, aluminio negro mate
+- Cristal hexagonal grabado (universo Kvothesson)
+- Speaker grille honeycomb en frente
+- Botón PTT lateral flush
+- Runas nórdicas en la tapa trasera
+- Cuelga de cadena titanio o cord negro
 
 ---
 
@@ -259,42 +195,60 @@ Esto permite:
 
 | Componente | Tecnología |
 |---|---|
-| Lenguaje core | Python 3.11+ |
-| Realtime translation | OpenAI GPT-4o Realtime API (WebSocket) |
-| Audio I/O | `sounddevice` + `PyAudio` |
+| Lenguaje | Python 3.11+ |
+| Traducción Realtime | `gpt-realtime-translate` via WebSocket |
+| Audio I/O | `sounddevice` + background thread queue |
 | Virtual mic (Windows) | VB-Audio Cable |
 | Virtual mic (macOS) | BlackHole |
-| System audio capture | `soundcard` (loopback) |
 | Config | YAML + env vars |
 | CLI | `click` |
-| Local server | `websockets` |
-| Packaging | `uv` / `pip` |
+| Packaging | `pip` / `uv` |
 
 ---
 
-## 9. Extensibilidad Futura
+## 9. CLI
 
-- **Otros providers**: Anthropic (cuando tenga Realtime), Gemini Live
-- **Otros idiomas**: el adapter de configuración permite cualquier par de idiomas
-- **Hardware alternativo**: cualquier mic + speaker USB funciona sin cambiar el core
-- **Modo offline**: Whisper local + LLM local (Ollama) + TTS local (Coqui) — calidad menor, sin costo
-- **Plugin system**: adapters como paquetes Python instalables (`averroes-adapter-chrome`, etc.)
+```bash
+averroes translate "¿Dónde está la estación?"   # texto, una frase
+averroes listen --from es --to ja               # interactivo texto
+averroes listen --adapter virtual-mic           # Meet unidireccional
+averroes listen --adapter meet                  # Meet bidireccional
+averroes listen --adapter device                # hardware Nyx
+averroes listen --adapter media                 # YouTube/videos
+averroes devices                                # listar dispositivos
+averroes langs                                  # listar idiomas
+averroes init                                   # generar config
+```
 
 ---
 
-## 10. Open Source
+## 10. Mercado
+
+**Lo que existe en 2026:**
+- Timekettle W4 Pro, Soundcore AeroFit 2, Kentfaith — auriculares de traducción
+- Requieren auricular en el interlocutor, o celu en la mesa, o modo face-to-face
+- Pendants AI (Meta/Limitless, Taya) — graban, no traducen
+
+**Lo que no existe:** pendant autónomo con speaker outward + canal privado + throat mic donde ambas personas participan sin tocar nada y sin que el interlocutor use ningún dispositivo.
+
+**Ventana:** `gpt-realtime-translate` es de mayo 2026. Los productos de hardware tienen ciclos de 2-3 años. Nadie lo tiene integrado todavía.
+
+---
+
+## 11. Open Source / Producto
 
 - **Licencia**: MIT
-- **Hardware**: STL files + BOM incluidos en `/hardware`
-- **API key**: el usuario provee la suya; no hay servidor intermedio
-- **MercadoLibre**: venta de kits ensamblados usando exactamente este mismo código
+- **GitHub**: averroes (core) — cualquiera lo fork, contribuye, adapta
+- **Hardware**: STL files + BOM en `/hardware`
+- **MercadoLibre**: venta de Nyx ensamblado usando este mismo código
+- **Modelo de negocio**: hardware (Nyx) + opcional suscripción con API incluida
 
 ---
 
-## 11. Nombre y Referencia
+## 12. Nombre y Referencia
 
-**Averroes** (Ibn Rushd, 1126–1198) fue el filósofo árabe que intentó comentar a Aristóteles sin haber visto nunca una obra de teatro griega. No podía traducir "tragedia" ni "comedia" porque no existían en su mundo cultural.
-
-Borges usó esa historia para hablar de los límites del lenguaje y la imposibilidad de la traducción perfecta.
+**Averroes** (Ibn Rushd, 1126–1198) intentó comentar a Aristóteles sin haber visto nunca una obra de teatro griega. No podía traducir "tragedia" ni "comedia" porque no existían en su mundo cultural. Borges lo usó para hablar de los límites del lenguaje.
 
 Este proyecto lleva su nombre como recordatorio de que la traducción perfecta no existe — solo existe la comprensión suficiente para que dos personas se entiendan.
+
+**Nyx** — unidad de suspensión del universo Kvothesson. Infiltración, sigilo, manipulación de entornos. Se infiltra en una conversación en un idioma ajeno y la hace funcionar. Asimétrica, fluida, núcleo expuesto.
