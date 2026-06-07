@@ -1,4 +1,4 @@
-"""Core translation pipeline using GPT-4o Realtime API over WebSocket."""
+"""Core translation pipeline — supports gpt-realtime-translate (GA) and gpt-realtime."""
 
 import asyncio
 import base64
@@ -11,7 +11,15 @@ from typing import Callable, Optional
 import websockets
 
 from .audio import AudioStream
-from .constants import LANG_NAMES, REALTIME_URL
+from .constants import LANG_NAMES, REALTIME_URL, REALTIME_TRANSLATE_URL
+
+# Language codes → full names used by gpt-realtime-translate
+TRANSLATE_LANG_NAMES = {
+    "es": "spanish", "ja": "japanese", "en": "english",
+    "fr": "french",  "pt": "portuguese", "zh": "chinese",
+    "de": "german",  "it": "italian",    "ko": "korean",
+    "ar": "arabic",  "ru": "russian",    "hi": "hindi",
+}
 
 
 @dataclass
@@ -22,17 +30,16 @@ class TranslationEvent:
     timestamp: float = field(default_factory=time.time)
 
     def __str__(self) -> str:
-        return (
-            f"[{self.latency_ms:.0f}ms] "
-            f"{self.source_text!r} → {self.target_text!r}"
-        )
+        return f"[{self.latency_ms:.0f}ms] {self.source_text!r} → {self.target_text!r}"
 
 
 class Pipeline:
-    """Real-time translation pipeline.
+    """Real-time translation pipeline over WebSocket.
 
-    Connects an AudioStream input to an AudioStream output,
-    translating speech via GPT-4o Realtime (WebSocket).
+    Automatically selects the correct session format and event names
+    based on the model:
+      - gpt-realtime-translate  →  translation session (cheap, fast, purpose-built)
+      - gpt-realtime / others   →  standard realtime session with instructions
 
     Usage::
 
@@ -45,7 +52,7 @@ class Pipeline:
         source_lang: str,
         target_lang: str,
         api_key: str,
-        model: str = "gpt-4o-realtime-preview",
+        model: str = "gpt-realtime-translate",
         context: str = "",
         voice: str = "alloy",
         on_translation: Optional[Callable[[TranslationEvent], None]] = None,
@@ -62,6 +69,7 @@ class Pipeline:
         self.vad_threshold = vad_threshold
         self.vad_silence_ms = vad_silence_ms
         self._stop_event = threading.Event()
+        self._is_translate_model = "translate" in model
 
     # ------------------------------------------------------------------
     # Public API
@@ -72,21 +80,16 @@ class Pipeline:
         asyncio.run(self._run_async(input_stream, output_stream))
 
     def stop(self) -> None:
-        """Signal the pipeline to stop."""
         self._stop_event.set()
 
     # ------------------------------------------------------------------
-    # Internal
+    # Connection
     # ------------------------------------------------------------------
 
-    async def _run_async(
-        self, input_stream: AudioStream, output_stream: AudioStream
-    ) -> None:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "OpenAI-Beta": "realtime=v1",
-        }
-        url = f"{REALTIME_URL}?model={self.model}"
+    async def _run_async(self, input_stream: AudioStream, output_stream: AudioStream) -> None:
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        base_url = REALTIME_TRANSLATE_URL if self._is_translate_model else REALTIME_URL
+        url = f"{base_url}?model={self.model}"
 
         async with websockets.connect(
             url,
@@ -94,27 +97,8 @@ class Pipeline:
             ping_interval=20,
             ping_timeout=10,
         ) as ws:
-            # Wait for the session to be ready
             await self._wait_for_session(ws)
-
-            # Configure translation behaviour
-            await ws.send(json.dumps({
-                "type": "session.update",
-                "session": {
-                    "modalities": ["audio", "text"],
-                    "instructions": self._build_instructions(),
-                    "voice": self.voice,
-                    "input_audio_format": "pcm16",
-                    "output_audio_format": "pcm16",
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": self.vad_threshold,
-                        "prefix_padding_ms": 300,
-                        "silence_duration_ms": self.vad_silence_ms,
-                    },
-                },
-            }))
+            await ws.send(json.dumps(self._build_session_update()))
 
             send_task = asyncio.create_task(self._send_audio(ws, input_stream))
             recv_task = asyncio.create_task(self._recv_audio(ws, output_stream))
@@ -130,12 +114,92 @@ class Pipeline:
     async def _wait_for_session(self, ws) -> None:
         async for raw in ws:
             event = json.loads(raw)
-            if event.get("type") == "session.created":
+            t = event.get("type", "")
+            if t in ("session.created", "translation_session.created"):
                 return
-            if event.get("type") == "error":
+            if t == "error":
                 raise RuntimeError(f"Session error: {event}")
 
+    # ------------------------------------------------------------------
+    # Session configuration (model-aware)
+    # ------------------------------------------------------------------
+
+    def _build_session_update(self) -> dict:
+        if self._is_translate_model:
+            return self._build_translate_session()
+        return self._build_realtime_session()
+
+    def _build_translate_session(self) -> dict:
+        """Session format for gpt-realtime-translate.
+
+        Specialized model: no instructions, no voice selection.
+        Session type is always "realtime" — translation is handled by the model.
+        Target language set via audio.output.language.
+        """
+        return {
+            "type": "session.update",
+            "session": {
+                "audio": {
+                    "input": {
+                        "transcription": {"model": "gpt-realtime-whisper"},
+                        "noise_reduction": {"type": "near_field"},
+                    },
+                    "output": {
+                        "language": self.target_lang,
+                    },
+                },
+            },
+        }
+
+    def _build_realtime_session(self) -> dict:
+        """Session format for gpt-realtime (general model)."""
+        return {
+            "type": "session.update",
+            "session": {
+                "type": "realtime",
+                "modalities": ["audio", "text"],
+                "instructions": self._build_instructions(),
+                "voice": self.voice,
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": {"model": "gpt-realtime-whisper"},
+                "turn_detection": {
+                    "type": "server_vad",
+                    "threshold": self.vad_threshold,
+                    "prefix_padding_ms": 300,
+                    "silence_duration_ms": self.vad_silence_ms,
+                },
+            },
+        }
+
+    def _build_instructions(self) -> str:
+        src = LANG_NAMES.get(self.source_lang, self.source_lang)
+        tgt = LANG_NAMES.get(self.target_lang, self.target_lang)
+        instructions = (
+            f"You are a real-time simultaneous interpreter.\n"
+            f"The user speaks {src}. Translate everything they say into natural, "
+            f"conversational {tgt}.\n\n"
+            f"Rules:\n"
+            f"- Output ONLY the translation. No commentary or explanations.\n"
+            f"- Match register and tone exactly.\n"
+            f"- Translate as fast as possible — latency matters more than perfection.\n"
+            f"- Preserve proper nouns (names, places) as-is."
+        )
+        if self.context:
+            instructions += f"\n\nConversation context:\n{self.context}"
+        return instructions
+
+    # ------------------------------------------------------------------
+    # Audio I/O
+    # ------------------------------------------------------------------
+
     async def _send_audio(self, ws, input_stream: AudioStream) -> None:
+        # translate endpoint prefixes all events with "session."
+        event_type = (
+            "session.input_audio_buffer.append"
+            if self._is_translate_model
+            else "input_audio_buffer.append"
+        )
         loop = asyncio.get_event_loop()
         while not self._stop_event.is_set():
             chunk = await loop.run_in_executor(None, input_stream.read)
@@ -143,7 +207,7 @@ class Pipeline:
                 await asyncio.sleep(0.01)
                 continue
             await ws.send(json.dumps({
-                "type": "input_audio_buffer.append",
+                "type": event_type,
                 "audio": base64.b64encode(chunk).decode(),
             }))
 
@@ -159,49 +223,57 @@ class Pipeline:
             event = json.loads(raw)
             t = event.get("type", "")
 
-            if t == "input_audio_buffer.speech_started":
+            # Speech start — reset state
+            if t in ("input_audio_buffer.speech_started", "session.speech_started"):
                 t_start = time.time()
                 source_transcript = ""
                 target_transcript = ""
 
-            elif t == "conversation.item.input_audio_transcription.completed":
-                source_transcript = event.get("transcript", "")
+            # Source transcript (what the user said)
+            elif t in (
+                "conversation.item.input_audio_transcription.completed",
+                "session.input_transcript.done",
+            ):
+                source_transcript = event.get("transcript", "") or event.get("delta", "")
 
-            elif t == "response.audio.delta":
-                output_stream.write(base64.b64decode(event["delta"]))
+            elif t == "session.input_transcript.delta":
+                source_transcript += event.get("delta", "")
 
-            elif t == "response.audio_transcript.delta":
+            # Translated audio — stream to output
+            elif t in (
+                "response.audio.delta",
+                "response.output_audio.delta",
+                "session.output_audio.delta",
+            ):
+                audio_bytes = base64.b64decode(event["delta"])
+                output_stream.write(audio_bytes)
+                if t_start is None:
+                    t_start = time.time()
+
+            # Translated text transcript (incremental)
+            elif t in (
+                "response.audio_transcript.delta",
+                "response.output_audio_transcript.delta",
+                "session.output_transcript.delta",
+            ):
                 target_transcript += event.get("delta", "")
 
-            elif t == "response.done":
-                if t_start is not None and self.on_translation:
+            # Response complete — fire callback
+            elif t in (
+                "response.done",
+                "session.output_audio.done",
+                "session.output_transcript.done",
+            ):
+                if t_start is not None and target_transcript and self.on_translation:
                     self.on_translation(TranslationEvent(
                         source_text=source_transcript,
                         target_text=target_transcript,
                         latency_ms=(time.time() - t_start) * 1000,
                     ))
+                    t_start = None
+                    source_transcript = ""
+                    target_transcript = ""
 
             elif t == "error":
                 msg = event.get("error", {}).get("message", str(event))
                 raise RuntimeError(f"Realtime API error: {msg}")
-
-    def _build_instructions(self) -> str:
-        src = LANG_NAMES.get(self.source_lang, self.source_lang)
-        tgt = LANG_NAMES.get(self.target_lang, self.target_lang)
-
-        instructions = (
-            f"You are a real-time simultaneous interpreter.\n"
-            f"The user speaks {src}. Translate everything they say into natural, "
-            f"conversational {tgt}.\n\n"
-            f"Rules:\n"
-            f"- Output ONLY the translation. No meta-commentary, no explanations.\n"
-            f"- Match the register and tone exactly (casual stays casual, polite stays polite).\n"
-            f"- Translate as fast as possible — latency matters more than perfection.\n"
-            f"- Preserve proper nouns (names, places) as-is.\n"
-            f"- If input is unclear, translate what you can and continue."
-        )
-
-        if self.context:
-            instructions += f"\n\nConversation context:\n{self.context}"
-
-        return instructions

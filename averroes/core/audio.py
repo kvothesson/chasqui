@@ -170,40 +170,50 @@ class BytesStream(AudioStream):
 
 
 class SpeakerStream(AudioStream):
-    """Plays audio through a speaker or virtual audio device."""
+    """Plays audio through a speaker or virtual audio device.
+
+    Uses a background thread + queue to decouple playback from the async pipeline.
+    """
 
     def __init__(self, device: Optional[str | int] = None):
-        import sounddevice as sd
-        self._sd = sd
         self.device = device
-        self._stream = None
-        self._lock = threading.Lock()
+        self._queue: queue.Queue[bytes] = queue.Queue(maxsize=100)
+        self._stopped = threading.Event()
+        self._thread: Optional[threading.Thread] = None
 
     def start(self) -> None:
-        self._stream = self._sd.RawOutputStream(
-            device=self.device,
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="int16",
-            blocksize=CHUNK_FRAMES,
-        )
-        self._stream.start()
+        self._thread = threading.Thread(target=self._player, daemon=True)
+        self._thread.start()
+
+    def _player(self) -> None:
+        import sounddevice as sd
+        try:
+            with sd.RawOutputStream(
+                device=self.device,
+                samplerate=SAMPLE_RATE,
+                channels=1,
+                dtype="int16",
+            ) as stream:
+                while not self._stopped.is_set():
+                    try:
+                        data = self._queue.get(timeout=0.05)
+                        stream.write(data)
+                    except queue.Empty:
+                        continue
+        except Exception as e:
+            print(f"  [SpeakerStream error] {e}", flush=True)
 
     def write(self, data: bytes) -> None:
-        if self._stream and data:
-            with self._lock:
-                try:
-                    self._stream.write(data)
-                except Exception:
-                    pass  # device disconnected, ignore
+        if data and not self._stopped.is_set():
+            try:
+                self._queue.put_nowait(data)
+            except queue.Full:
+                pass  # drop if player can't keep up
 
     def close(self) -> None:
-        if self._stream:
-            try:
-                self._stream.stop()
-                self._stream.close()
-            except Exception:
-                pass
+        self._stopped.set()
+        if self._thread:
+            self._thread.join(timeout=2.0)
 
 
 class NullStream(AudioStream):
