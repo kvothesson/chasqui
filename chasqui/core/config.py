@@ -16,6 +16,7 @@ class DeviceConfig:
     mic: Optional[str] = None        # microphone device name or index
     speaker: Optional[str] = None    # outward speaker (Japanese person hears this)
     earphone: Optional[str] = None   # earphone (user hears translation here)
+    loopback: Optional[str] = None   # capture device for the other side's audio (bridge/meet IN)
     ptt_mode: str = "vad"            # vad | hold | toggle
 
 
@@ -94,6 +95,7 @@ class Config:
                 mic=dev.get("mic"),
                 speaker=dev.get("speaker"),
                 earphone=dev.get("earphone"),
+                loopback=dev.get("loopback"),
                 ptt_mode=dev.get("ptt_mode", "vad"),
             )
 
