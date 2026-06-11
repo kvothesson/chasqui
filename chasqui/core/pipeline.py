@@ -315,19 +315,21 @@ class Pipeline:
                 state["last_delta_at"] = time.time()
 
             elif t == "session.input_transcript.delta":
+                if state["t_start"] is None:
+                    state["t_start"] = time.time()
                 state["source"] += event.get("delta", "")
                 state["last_delta_at"] = time.time()
 
-            # Translated audio — stream to output
+            # Translated audio — stream to output.
+            # NOTE: the translate endpoint streams audio continuously (silence
+            # included), so audio deltas must NOT feed last_delta_at — only
+            # transcript deltas mark real speech activity.
             elif t in (
                 "response.audio.delta",
                 "response.output_audio.delta",
                 "session.output_audio.delta",
             ):
                 output_stream.write(base64.b64decode(event["delta"]))
-                if state["t_start"] is None:
-                    state["t_start"] = time.time()
-                state["last_delta_at"] = time.time()
 
             # Translated text transcript (incremental)
             elif t in (
