@@ -251,31 +251,42 @@ class Pipeline:
     TRANSCRIPT_FLUSH_S = 1.2
 
     async def _recv_audio(self, ws, output_stream: AudioStream) -> None:
-        t_start: Optional[float] = None
-        source_transcript = ""
-        target_transcript = ""
-        last_delta_at: Optional[float] = None
+        state = {
+            "t_start": None,          # time of first audio delta of the utterance
+            "source": "",
+            "target": "",
+            "last_delta_at": None,    # time of last delta received
+        }
 
         def _flush():
-            nonlocal t_start, source_transcript, target_transcript, last_delta_at
-            if target_transcript and self.on_translation:
+            if state["target"] and self.on_translation:
+                t_start = state["t_start"]
                 self.on_translation(TranslationEvent(
-                    source_text=source_transcript.strip(),
-                    target_text=target_transcript.strip(),
+                    source_text=state["source"].strip(),
+                    target_text=state["target"].strip(),
                     latency_ms=((time.time() - t_start) * 1000) if t_start else 0.0,
                 ))
-            t_start = None
-            source_transcript = ""
-            target_transcript = ""
-            last_delta_at = None
+            state.update(t_start=None, source="", target="", last_delta_at=None)
 
-        while not self._stop_event.is_set():
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
-            except asyncio.TimeoutError:
-                if last_delta_at and time.time() - last_delta_at > self.TRANSCRIPT_FLUSH_S:
+        async def _watchdog():
+            # The translate endpoint never sends "done" events, so utterance
+            # boundaries are inferred from event-stream inactivity.
+            while not self._stop_event.is_set():
+                await asyncio.sleep(0.3)
+                last = state["last_delta_at"]
+                if last and time.time() - last > self.TRANSCRIPT_FLUSH_S:
                     _flush()
-                continue
+
+        watchdog = asyncio.create_task(_watchdog())
+        try:
+            await self._consume_events(ws, output_stream, state, _flush)
+        finally:
+            watchdog.cancel()
+
+    async def _consume_events(self, ws, output_stream: AudioStream, state: dict, _flush) -> None:
+        async for raw in ws:
+            if self._stop_event.is_set():
+                break
 
             event = json.loads(raw)
             t = event.get("type", "")
@@ -284,26 +295,26 @@ class Pipeline:
                 if "audio.delta" in t:
                     self._dbg_audio = getattr(self, "_dbg_audio", 0) + 1
                     if self._dbg_audio % 10 == 1:
-                        print(f"  [debug] audio delta #{self._dbg_audio} ({t}, {len(event.get('delta',''))} b64 bytes)", flush=True)
+                        print(f"  [debug] audio delta #{self._dbg_audio} ({t})", flush=True)
                 else:
-                    print(f"  [debug] event: {t} | keys: {sorted(event.keys())}", flush=True)
+                    print(f"  [debug] event: {t}", flush=True)
 
             # Speech start — new utterance boundary (gpt-realtime only)
             if t in ("input_audio_buffer.speech_started", "session.speech_started"):
                 _flush()
-                t_start = time.time()
+                state["t_start"] = time.time()
 
             # Source transcript (what the user said)
             elif t in (
                 "conversation.item.input_audio_transcription.completed",
                 "session.input_transcript.done",
             ):
-                source_transcript = event.get("transcript", "") or event.get("delta", "")
-                last_delta_at = time.time()
+                state["source"] = event.get("transcript", "") or event.get("delta", "")
+                state["last_delta_at"] = time.time()
 
             elif t == "session.input_transcript.delta":
-                source_transcript += event.get("delta", "")
-                last_delta_at = time.time()
+                state["source"] += event.get("delta", "")
+                state["last_delta_at"] = time.time()
 
             # Translated audio — stream to output
             elif t in (
@@ -311,11 +322,10 @@ class Pipeline:
                 "response.output_audio.delta",
                 "session.output_audio.delta",
             ):
-                audio_bytes = base64.b64decode(event["delta"])
-                output_stream.write(audio_bytes)
-                if t_start is None:
-                    t_start = time.time()
-                last_delta_at = time.time()
+                output_stream.write(base64.b64decode(event["delta"]))
+                if state["t_start"] is None:
+                    state["t_start"] = time.time()
+                state["last_delta_at"] = time.time()
 
             # Translated text transcript (incremental)
             elif t in (
@@ -323,11 +333,11 @@ class Pipeline:
                 "response.output_audio_transcript.delta",
                 "session.output_transcript.delta",
             ):
-                target_transcript += event.get("delta", "")
-                last_delta_at = time.time()
+                state["target"] += event.get("delta", "")
+                state["last_delta_at"] = time.time()
 
             # Response complete — fire callback (gpt-realtime; the translate
-            # endpoint never sends these, see inactivity flush above)
+            # endpoint never sends these, see watchdog flush above)
             elif t in (
                 "response.done",
                 "session.output_audio.done",
