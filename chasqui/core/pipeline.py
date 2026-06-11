@@ -261,7 +261,7 @@ class Pipeline:
         def _flush():
             if self._debug:
                 print(f"  [debug] flush: src={state['source']!r} tgt={state['target']!r} cb={self.on_translation is not None}", flush=True)
-            if state["target"] and self.on_translation:
+            if (state["source"] or state["target"]) and self.on_translation:
                 t_start = state["t_start"]
                 self.on_translation(TranslationEvent(
                     source_text=state["source"].strip(),
