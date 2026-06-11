@@ -245,10 +245,13 @@ class Pipeline:
             if self._debug and sent % 50 == 0:  # every ~5s of audio
                 print(f"  [debug] sent {sent} audio chunks", flush=True)
 
-    # Seconds of event silence after which accumulated transcripts are flushed.
+    # Seconds of transcript inactivity after which accumulated text is flushed.
     # The translate endpoint streams continuously and never emits "done" events,
-    # so utterance boundaries are inferred from inactivity.
+    # so utterance boundaries are inferred from inactivity. When only one side
+    # (source or target) has arrived, wait up to FLUSH_MAX for the other before
+    # flushing the pair incomplete.
     TRANSCRIPT_FLUSH_S = 1.2
+    TRANSCRIPT_FLUSH_MAX_S = 5.0
 
     async def _recv_audio(self, ws, output_stream: AudioStream) -> None:
         state = {
@@ -276,7 +279,11 @@ class Pipeline:
             while not self._stop_event.is_set():
                 await asyncio.sleep(0.3)
                 last = state["last_delta_at"]
-                if last and time.time() - last > self.TRANSCRIPT_FLUSH_S:
+                if not last:
+                    continue
+                idle = time.time() - last
+                complete = state["source"] and state["target"]
+                if idle > (self.TRANSCRIPT_FLUSH_S if complete else self.TRANSCRIPT_FLUSH_MAX_S):
                     _flush()
 
         watchdog = asyncio.create_task(_watchdog())
