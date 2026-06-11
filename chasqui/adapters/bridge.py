@@ -1,4 +1,5 @@
-"""Bridge adapter — bidirectional simultaneous translation for any voice app (ChatGPT, Discord, Zoom, Meet…).
+"""Bridge adapter — bidirectional simultaneous translation for any voice app
+(ChatGPT, Discord, Zoom, Meet…).
 
 Two pipelines run in parallel:
 
@@ -11,12 +12,11 @@ Setup:
   3. Run: chasqui listen --adapter bridge
 """
 
-import sys
 import threading
 from typing import Optional
 
 from ..core.audio import MicStream, LoopbackStream, SpeakerStream
-from .base import BaseAdapter
+from .base import BaseAdapter, _safe_print
 
 _CABLE_INPUT_HINTS  = ["CABLE Input"]   # playback device → chasqui sends translated audio here
 _CABLE_OUTPUT_HINTS = ["CABLE Output"]  # recording device → chasqui captures app audio from here
@@ -25,8 +25,11 @@ _CABLE_OUTPUT_HINTS = ["CABLE Output"]  # recording device → chasqui captures 
 class BridgeAdapter(BaseAdapter):
     """Bidirectional real-time translation for any voice app."""
 
+    header = "Bridge mode (bidirectional)"
+    app_label = "your app (ChatGPT, Discord, Zoom...)"
+
     def run(self) -> None:
-        self._print_header("Bridge mode (bidirectional)")
+        self._print_header(self.header)
 
         cable_input  = self._find_device(_CABLE_INPUT_HINTS,  self.config.device.speaker, require_output=True)
         cable_output = self._find_device(_CABLE_OUTPUT_HINTS, None, require_output=False)
@@ -36,7 +39,7 @@ class BridgeAdapter(BaseAdapter):
         if not cable_input:
             print("\n  [warn] CABLE Input not found — install VB-Audio Cable and rerun.")
         print()
-        print("  In your app (ChatGPT, Discord, Zoom...), set microphone to 'CABLE Output'.")
+        print(f"  In {self.app_label}, set microphone to 'CABLE Output'.")
         print("  (Ctrl+C to stop)\n")
 
         # OUT pipeline: my mic → translated → CABLE Input (they hear me in their language)
@@ -49,7 +52,6 @@ class BridgeAdapter(BaseAdapter):
         earphone_out = SpeakerStream(device=self.config.device.earphone)
         pipeline_in  = self._make_pipeline_reverse()
 
-        # Start all streams
         mic_in.start()
         cable_out.start()
         loopback_in.start()
@@ -57,34 +59,20 @@ class BridgeAdapter(BaseAdapter):
 
         stop_event = threading.Event()
 
-        def _safe_print(msg: str) -> None:
+        def _run_direction(label: str, pipeline, in_stream, out_stream):
+            _safe_print(f"  [{label}] Connecting to API...")
             try:
-                print(msg, flush=True)
-            except UnicodeEncodeError:
-                print(msg.encode("ascii", errors="replace").decode(), flush=True)
-
-        def _run_out():
-            _safe_print("  [OUT] Connecting to API...")
-            try:
-                pipeline_out.run(mic_in, cable_out)
+                pipeline.run(in_stream, out_stream)
             except Exception as e:
                 if not stop_event.is_set():
-                    _safe_print(f"\n  [OUT error] {e}")
+                    _safe_print(f"\n  [{label} error] {e}")
             finally:
                 stop_event.set()
 
-        def _run_in():
-            _safe_print("  [IN]  Connecting to API...")
-            try:
-                pipeline_in.run(loopback_in, earphone_out)
-            except Exception as e:
-                if not stop_event.is_set():
-                    _safe_print(f"\n  [IN error] {e}")
-            finally:
-                stop_event.set()
-
-        t_out = threading.Thread(target=_run_out, daemon=True)
-        t_in  = threading.Thread(target=_run_in,  daemon=True)
+        t_out = threading.Thread(
+            target=_run_direction, args=("OUT", pipeline_out, mic_in, cable_out), daemon=True)
+        t_in = threading.Thread(
+            target=_run_direction, args=("IN", pipeline_in, loopback_in, earphone_out), daemon=True)
         t_out.start()
         t_in.start()
 
@@ -105,34 +93,6 @@ class BridgeAdapter(BaseAdapter):
         t_out.join(timeout=3)
         t_in.join(timeout=3)
         self._save_session_if_needed()
-
-    def _make_pipeline_reverse(self):
-        """Pipeline for the IN direction: target_lang → source_lang."""
-        from ..core.pipeline import Pipeline, TranslationEvent
-
-        def _on_event(event: TranslationEvent):
-            self._session.add_turn(
-                source_text=event.source_text,
-                target_text=event.target_text,
-                latency_ms=event.latency_ms,
-            )
-            if self.config.logging.show_transcript:
-                src = self.config.target_lang.upper()
-                tgt = self.config.source_lang.upper()
-                print(f"\n  [{src}→{tgt}] {event.source_text!r}")
-                print(f"          {event.target_text!r}  {event.latency_ms:.0f}ms")
-
-        return Pipeline(
-            source_lang=self.config.target_lang,
-            target_lang=self.config.source_lang,
-            api_key=self.config.api_key,
-            model=self.config.model,
-            context=self.config.context,
-            voice=self.config.voice,
-            on_translation=_on_event,
-            vad_threshold=self.config.vad_threshold,
-            vad_silence_ms=self.config.vad_silence_ms,
-        )
 
     @staticmethod
     def _find_device(hints: list[str], override: Optional[str], require_output: bool = False) -> Optional[str]:

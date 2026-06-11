@@ -35,6 +35,7 @@ def _run_adapter(cfg: Config) -> None:
         "virtual-mic": "chasqui.adapters.virtual_mic.VirtualMicAdapter",
         "media":       "chasqui.adapters.media.MediaAdapter",
         "bridge":      "chasqui.adapters.bridge.BridgeAdapter",
+        "meet":        "chasqui.adapters.meet.MeetAdapter",
     }
 
     module_path = adapter_map.get(cfg.adapter)
@@ -80,8 +81,8 @@ def cli():
 @click.option("--to", "target_lang", default=None, metavar="LANG",
               help="Target language code")
 @click.option("--adapter", default=None,
-              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge"]),
-              help="Input/output adapter (default: text)")
+              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge", "meet"]),
+              help="Input/output adapter (default: from config, else text)")
 @click.option("--voice", default=None,
               type=click.Choice(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]),
               help="GPT-4o voice for translated output")
@@ -102,7 +103,7 @@ def listen(source_lang, target_lang, adapter, voice, context, config_path):
         config_path,
         source_lang=source_lang,
         target_lang=target_lang,
-        adapter=adapter or "text",
+        adapter=adapter,
         voice=voice,
         context=context,
     )

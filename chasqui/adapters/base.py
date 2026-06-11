@@ -8,6 +8,14 @@ from ..core.pipeline import Pipeline, TranslationEvent
 from ..core.session import Session
 
 
+def _safe_print(msg: str) -> None:
+    """Print that survives non-UTF8 consoles (CJK output on Windows)."""
+    try:
+        print(msg, flush=True)
+    except UnicodeEncodeError:
+        print(msg.encode("ascii", errors="replace").decode(), flush=True)
+
+
 class BaseAdapter(abc.ABC):
     """All adapters inherit from this.
 
@@ -52,17 +60,40 @@ class BaseAdapter(abc.ABC):
             vad_silence_ms=self.config.vad_silence_ms,
         )
 
+    def _make_pipeline_reverse(self, on_translation=None) -> Pipeline:
+        """Pipeline for the IN direction: target_lang → source_lang."""
+        def _combined(event: TranslationEvent):
+            self._session.add_turn(
+                source_text=event.source_text,
+                target_text=event.target_text,
+                latency_ms=event.latency_ms,
+            )
+            if self.config.logging.show_transcript:
+                src = self.config.target_lang.upper()
+                tgt = self.config.source_lang.upper()
+                _safe_print(f"\n  [{src}→{tgt}] {event.source_text!r}")
+                _safe_print(f"          {event.target_text!r}  {event.latency_ms:.0f}ms")
+            if on_translation:
+                on_translation(event)
+
+        return Pipeline(
+            source_lang=self.config.target_lang,
+            target_lang=self.config.source_lang,
+            api_key=self.config.api_key,
+            model=self.config.model,
+            context=self.config.context,
+            voice=self.config.voice,
+            on_translation=_combined,
+            vad_threshold=self.config.vad_threshold,
+            vad_silence_ms=self.config.vad_silence_ms,
+        )
+
     def _print_event(self, event: TranslationEvent) -> None:
         src = self.config.source_lang.upper()
         tgt = self.config.target_lang.upper()
-        def _p(msg: str) -> None:
-            try:
-                print(msg, flush=True)
-            except UnicodeEncodeError:
-                print(msg.encode("ascii", errors="replace").decode(), flush=True)
-        _p(f"\n  [{src}] {event.source_text}")
-        _p(f"  [{tgt}] {event.target_text}")
-        _p(f"        {event.latency_ms:.0f}ms")
+        _safe_print(f"\n  [{src}] {event.source_text}")
+        _safe_print(f"  [{tgt}] {event.target_text}")
+        _safe_print(f"        {event.latency_ms:.0f}ms")
 
     def _print_header(self, adapter_name: str) -> None:
         src = LANG_NAMES.get(self.config.source_lang, self.config.source_lang)
