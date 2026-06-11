@@ -86,7 +86,30 @@ class Pipeline:
     # Connection
     # ------------------------------------------------------------------
 
+    MAX_RECONNECT_ATTEMPTS = 5
+
     async def _run_async(self, input_stream: AudioStream, output_stream: AudioStream) -> None:
+        """Connect and translate; reconnect with backoff if the socket drops."""
+        attempt = 0
+        while not self._stop_event.is_set():
+            try:
+                await self._connect_and_translate(input_stream, output_stream)
+                return  # clean exit (stop() was called)
+            except (websockets.ConnectionClosed, OSError) as e:
+                if self._stop_event.is_set():
+                    return
+                attempt += 1
+                if attempt > self.MAX_RECONNECT_ATTEMPTS:
+                    raise RuntimeError(
+                        f"Connection lost and {self.MAX_RECONNECT_ATTEMPTS} reconnect attempts failed: {e}"
+                    ) from e
+                delay = min(2 ** attempt, 10)
+                print(f"  [chasqui] connection dropped ({e}); reconnecting in {delay}s...", flush=True)
+                await asyncio.sleep(delay)
+
+    async def _connect_and_translate(
+        self, input_stream: AudioStream, output_stream: AudioStream
+    ) -> None:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         base_url = REALTIME_TRANSLATE_URL if self._is_translate_model else REALTIME_URL
         url = f"{base_url}?model={self.model}"
@@ -103,13 +126,17 @@ class Pipeline:
             send_task = asyncio.create_task(self._send_audio(ws, input_stream))
             recv_task = asyncio.create_task(self._recv_audio(ws, output_stream))
 
-            try:
-                await asyncio.gather(send_task, recv_task)
-            except (asyncio.CancelledError, KeyboardInterrupt):
-                pass
-            finally:
-                send_task.cancel()
-                recv_task.cancel()
+            # First task to finish (stop(), socket close, or error) ends the session;
+            # the sibling is cancelled so stop() can't leave recv hanging forever.
+            done, pending = await asyncio.wait(
+                {send_task, recv_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in pending:
+                task.cancel()
+            for task in done:
+                exc = task.exception()
+                if exc is not None and not isinstance(exc, asyncio.CancelledError):
+                    raise exc
 
     async def _wait_for_session(self, ws) -> None:
         async for raw in ws:

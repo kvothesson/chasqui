@@ -40,6 +40,7 @@ class Config:
     # API
     api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
     model: str = "gpt-4o-realtime-preview"
+    text_model: str = "gpt-4o-mini"   # Chat Completions model for the text adapter
 
     # Translation
     source_lang: str = "es"
@@ -76,6 +77,7 @@ class Config:
         if api := d.get("api"):
             cfg.api_key = _resolve_env(api.get("key", cfg.api_key))
             cfg.model = api.get("model", cfg.model)
+            cfg.text_model = api.get("text_model", cfg.text_model)
 
         if session := d.get("session"):
             cfg.source_lang = session.get("source_lang", cfg.source_lang)

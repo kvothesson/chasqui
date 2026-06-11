@@ -56,15 +56,18 @@ class MicStream(AudioStream):
         self._stopped = threading.Event()
         self._stream = None
 
+    def _to_mono(self, indata: np.ndarray) -> np.ndarray:
+        return indata[:, 0]
+
     def start(self) -> None:
         def _callback(indata, frames, time, status):
             if self._stopped.is_set():
                 return
-            pcm = (indata[:, 0] * 32767).astype(np.int16)
+            pcm = (self._to_mono(indata) * 32767).astype(np.int16)
             try:
                 self._queue.put_nowait(pcm.tobytes())
             except queue.Full:
-                pass  # drop oldest if consumer is slow
+                pass  # drop if consumer is slow
 
         self._stream = self._sd.InputStream(
             device=self.device,
@@ -91,56 +94,16 @@ class MicStream(AudioStream):
             self._stream.close()
 
 
-class LoopbackStream(AudioStream):
+class LoopbackStream(MicStream):
     """Captures system audio output (loopback) for media translation.
 
     Windows: enable 'Stereo Mix' in Sound > Recording devices.
     macOS:   install BlackHole (https://github.com/ExistentialAudio/BlackHole).
     """
 
-    def __init__(self, device: Optional[str | int] = None):
-        import sounddevice as sd
-        self._sd = sd
-        self.device = device
-        self._queue: queue.Queue[bytes] = queue.Queue(maxsize=50)
-        self._stopped = threading.Event()
-        self._stream = None
-
-    def start(self) -> None:
-        def _callback(indata, frames, time, status):
-            if self._stopped.is_set():
-                return
-            # mix to mono if stereo
-            mono = indata.mean(axis=1) if indata.ndim > 1 else indata[:, 0]
-            pcm = (mono * 32767).astype(np.int16)
-            try:
-                self._queue.put_nowait(pcm.tobytes())
-            except queue.Full:
-                pass
-
-        self._stream = self._sd.InputStream(
-            device=self.device,
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="float32",
-            blocksize=CHUNK_FRAMES,
-            callback=_callback,
-        )
-        self._stream.start()
-
-    def read(self, chunk_size: int = CHUNK_SIZE) -> bytes:
-        if self._stopped.is_set():
-            return b""
-        try:
-            return self._queue.get(timeout=1.0)
-        except queue.Empty:
-            return b""
-
-    def close(self) -> None:
-        self._stopped.set()
-        if self._stream:
-            self._stream.stop()
-            self._stream.close()
+    def _to_mono(self, indata: np.ndarray) -> np.ndarray:
+        # loopback devices may deliver stereo — mix down
+        return indata.mean(axis=1) if indata.ndim > 1 else indata[:, 0]
 
 
 class BytesStream(AudioStream):

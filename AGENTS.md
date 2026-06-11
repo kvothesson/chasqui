@@ -23,7 +23,7 @@ chasqui/
     virtual_mic.py  ← Routes output to a virtual mic (VB-Audio Cable)
     media.py        ← Translates a media file
     bridge.py       ← Two-device LAN pair mode
-    meet.py         ← Bidirectional translation for Google Meet / Zoom
+    meet.py         ← Thin subclass of BridgeAdapter with Meet-specific instructions
   cli.py            ← Click CLI: listen, translate, devices, langs, init
 ```
 
@@ -116,5 +116,11 @@ chasqui listen --adapter text
 chasqui devices
 ```
 
-There is no automated test suite yet. The `examples/` directory has standalone scripts
-for audio and virtual mic testing.
+Unit tests live in `tests/` (no network or audio hardware required):
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+The `examples/` directory has standalone scripts for audio and virtual mic testing.

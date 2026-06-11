@@ -9,7 +9,17 @@ description = "Real-time simultaneous translation. Speak your language. Be under
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-keywords = ["translation", "real-time", "speech", "ai", "gpt4o"]
+keywords = ["translation", "real-time", "speech", "ai", "interpreter", "realtime-api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
 dependencies = [
     "openai>=1.40.0",
     "websockets>=12.0",
@@ -20,12 +30,22 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/kvothesson/chasqui"
+Issues = "https://github.com/kvothesson/chasqui/issues"
+
 [project.scripts]
 chasqui = "chasqui.cli:cli"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "black", "ruff"]
 
+[tool.setuptools.packages.find]
+include = ["chasqui*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

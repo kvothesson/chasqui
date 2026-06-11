@@ -8,7 +8,7 @@ from .base import BaseAdapter
 
 
 class DeviceAdapter(BaseAdapter):
-    """Designed for the Averroes pendant.
+    """Designed for the eco pendant.
 
     Requires:
     - USB throat/contact mic

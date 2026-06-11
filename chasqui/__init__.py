@@ -1,4 +1,4 @@
-"""Averroes — Real-time simultaneous translation."""
+"""Chasqui — Real-time simultaneous translation."""
 
 __version__ = "0.1.0"
 

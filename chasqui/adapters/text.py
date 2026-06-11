@@ -58,7 +58,7 @@ class TextAdapter(BaseAdapter):
             system += f"\nContext: {self.config.context}"
 
         resp = self._client.chat.completions.create(
-            model="gpt-4o",
+            model=self.config.text_model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": text},
