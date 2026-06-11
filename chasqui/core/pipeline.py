@@ -245,26 +245,53 @@ class Pipeline:
             if self._debug and sent % 50 == 0:  # every ~5s of audio
                 print(f"  [debug] sent {sent} audio chunks", flush=True)
 
+    # Seconds of event silence after which accumulated transcripts are flushed.
+    # The translate endpoint streams continuously and never emits "done" events,
+    # so utterance boundaries are inferred from inactivity.
+    TRANSCRIPT_FLUSH_S = 1.2
+
     async def _recv_audio(self, ws, output_stream: AudioStream) -> None:
         t_start: Optional[float] = None
         source_transcript = ""
         target_transcript = ""
+        last_delta_at: Optional[float] = None
 
-        async for raw in ws:
-            if self._stop_event.is_set():
-                break
+        def _flush():
+            nonlocal t_start, source_transcript, target_transcript, last_delta_at
+            if target_transcript and self.on_translation:
+                self.on_translation(TranslationEvent(
+                    source_text=source_transcript.strip(),
+                    target_text=target_transcript.strip(),
+                    latency_ms=((time.time() - t_start) * 1000) if t_start else 0.0,
+                ))
+            t_start = None
+            source_transcript = ""
+            target_transcript = ""
+            last_delta_at = None
+
+        while not self._stop_event.is_set():
+            try:
+                raw = await asyncio.wait_for(ws.recv(), timeout=0.5)
+            except asyncio.TimeoutError:
+                if last_delta_at and time.time() - last_delta_at > self.TRANSCRIPT_FLUSH_S:
+                    _flush()
+                continue
 
             event = json.loads(raw)
             t = event.get("type", "")
 
-            if self._debug and "audio.delta" not in t:
-                print(f"  [debug] event: {t}", flush=True)
+            if self._debug:
+                if "audio.delta" in t:
+                    self._dbg_audio = getattr(self, "_dbg_audio", 0) + 1
+                    if self._dbg_audio % 10 == 1:
+                        print(f"  [debug] audio delta #{self._dbg_audio} ({t}, {len(event.get('delta',''))} b64 bytes)", flush=True)
+                else:
+                    print(f"  [debug] event: {t} | keys: {sorted(event.keys())}", flush=True)
 
-            # Speech start — reset state
+            # Speech start — new utterance boundary (gpt-realtime only)
             if t in ("input_audio_buffer.speech_started", "session.speech_started"):
+                _flush()
                 t_start = time.time()
-                source_transcript = ""
-                target_transcript = ""
 
             # Source transcript (what the user said)
             elif t in (
@@ -272,9 +299,11 @@ class Pipeline:
                 "session.input_transcript.done",
             ):
                 source_transcript = event.get("transcript", "") or event.get("delta", "")
+                last_delta_at = time.time()
 
             elif t == "session.input_transcript.delta":
                 source_transcript += event.get("delta", "")
+                last_delta_at = time.time()
 
             # Translated audio — stream to output
             elif t in (
@@ -286,6 +315,7 @@ class Pipeline:
                 output_stream.write(audio_bytes)
                 if t_start is None:
                     t_start = time.time()
+                last_delta_at = time.time()
 
             # Translated text transcript (incremental)
             elif t in (
@@ -294,22 +324,16 @@ class Pipeline:
                 "session.output_transcript.delta",
             ):
                 target_transcript += event.get("delta", "")
+                last_delta_at = time.time()
 
-            # Response complete — fire callback
+            # Response complete — fire callback (gpt-realtime; the translate
+            # endpoint never sends these, see inactivity flush above)
             elif t in (
                 "response.done",
                 "session.output_audio.done",
                 "session.output_transcript.done",
             ):
-                if t_start is not None and target_transcript and self.on_translation:
-                    self.on_translation(TranslationEvent(
-                        source_text=source_transcript,
-                        target_text=target_transcript,
-                        latency_ms=(time.time() - t_start) * 1000,
-                    ))
-                    t_start = None
-                    source_transcript = ""
-                    target_transcript = ""
+                _flush()
 
             elif t == "error":
                 msg = event.get("error", {}).get("message", str(event))
