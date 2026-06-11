@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -70,6 +71,8 @@ class Pipeline:
         self.vad_silence_ms = vad_silence_ms
         self._stop_event = threading.Event()
         self._is_translate_model = "translate" in model
+        # CHASQUI_DEBUG=1 prints every server event type and audio send stats
+        self._debug = os.environ.get("CHASQUI_DEBUG", "") not in ("", "0")
 
     # ------------------------------------------------------------------
     # Public API
@@ -228,6 +231,7 @@ class Pipeline:
             else "input_audio_buffer.append"
         )
         loop = asyncio.get_event_loop()
+        sent = 0
         while not self._stop_event.is_set():
             chunk = await loop.run_in_executor(None, input_stream.read)
             if not chunk:
@@ -237,6 +241,9 @@ class Pipeline:
                 "type": event_type,
                 "audio": base64.b64encode(chunk).decode(),
             }))
+            sent += 1
+            if self._debug and sent % 50 == 0:  # every ~5s of audio
+                print(f"  [debug] sent {sent} audio chunks", flush=True)
 
     async def _recv_audio(self, ws, output_stream: AudioStream) -> None:
         t_start: Optional[float] = None
@@ -249,6 +256,9 @@ class Pipeline:
 
             event = json.loads(raw)
             t = event.get("type", "")
+
+            if self._debug and "audio.delta" not in t:
+                print(f"  [debug] event: {t}", flush=True)
 
             # Speech start — reset state
             if t in ("input_audio_buffer.speech_started", "session.speech_started"):
