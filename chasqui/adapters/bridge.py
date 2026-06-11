@@ -32,7 +32,7 @@ class BridgeAdapter(BaseAdapter):
         self._print_header(self.header)
 
         cable_input  = self._find_device(_CABLE_INPUT_HINTS,  self.config.device.speaker, require_output=True)
-        cable_output = self._find_device(_CABLE_OUTPUT_HINTS, None, require_output=False)
+        cable_output = self._find_device(_CABLE_OUTPUT_HINTS, self.config.device.loopback, require_output=False)
 
         print(f"  OUT  real mic → {self.config.source_lang}→{self.config.target_lang} → {cable_input or 'default speaker'}")
         print(f"  IN   {cable_output or 'default loopback'} → {self.config.target_lang}→{self.config.source_lang} → {self.config.device.earphone or 'default speaker'}")
