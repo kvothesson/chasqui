@@ -15,13 +15,13 @@ chasqui listen --from es --to ja
 
 ## Adapters
 
-| Adapter | Use case |
-|---|---|
-| `text` | Keyboard in, terminal out — silent mode, accessibility, testing |
-| `device` | Physical pendant (mic + speaker) — the **eco** hardware |
-| `virtual-mic` | Google Meet, Zoom, Teams (one-way: your voice, translated) |
-| `bridge` / `meet` | Bidirectional translation for any voice app (needs VB-Audio Cable) |
-| `media` | YouTube, videos, any system audio |
+| Adapter | Use case | Status |
+|---|---|---|
+| `text` | Keyboard in, terminal out — silent mode, accessibility, testing | ✅ Working |
+| `virtual-mic` | Google Meet, Zoom, Teams, ChatGPT Voice (one-way: your voice, translated) | ✅ Working — validated end-to-end with ChatGPT Voice |
+| `bridge` / `meet` | Bidirectional translation for any voice app (needs VB-Audio Cable) | OUT ✅ / IN in progress |
+| `media` | YouTube, videos, any system audio → your language | Implemented, untested |
+| `device` | Physical pendant (mic + speaker) — the **eco** hardware | Awaiting hardware |
 
 ## Commands
 
