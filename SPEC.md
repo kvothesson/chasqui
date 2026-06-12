@@ -115,17 +115,20 @@ echo "gracias" | chasqui translate --from es --to ja
 tu mic real → pipeline ES→JA → CABLE Input → Meet transmite japonés
 ```
 Requiere VB-Audio Cable (Windows) o BlackHole (macOS).  
-**Estado: ✅ funciona**
+**Estado: ✅ funciona — validado end-to-end con ChatGPT Voice (2026-06-11): voz ES → JA → ChatGPT entiende y responde. Transcripts en consola con par ES/JA emparejado.**
 
 ---
 
-### 6.3 `meet` — Google Meet bidireccional
+### 6.3 `meet` / `bridge` — Bidireccional
+`MeetAdapter` es subclase fina de `BridgeAdapter` (mismo plumbing, distintas instrucciones).
 Dos pipelines corriendo en paralelo:
 ```
 pipeline OUT: tu mic real   → ES→JA → CABLE Input     (ellos te escuchan en japonés)
-pipeline IN:  audio de Meet → JA→ES → bone conduction  (vos escuchás en español)
+pipeline IN:  audio de la app → JA→ES → earphone       (vos escuchás en español)
 ```
-**Estado: por implementar**
+**Estado: OUT ✅ funciona. IN pendiente** — requiere capturar el audio de la app:
+segundo cable (VB-Cable A+B) o Stereo Mix, configurado vía `device.loopback` en chasqui.yaml.
+Es el **próximo paso**: obtener audio en japonés y escucharlo directo en español.
 
 ---
 

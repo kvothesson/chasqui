@@ -103,6 +103,19 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   handled in `Pipeline._recv_audio`.
 - **`pipeline.stop()` is non-blocking**: it sets a `threading.Event`. Callers must join
   threads before exiting or audio devices may not close cleanly.
+- **The translate endpoint streams output audio continuously** (silence included) and
+  **never emits "done"/completion events**. Utterance boundaries are inferred by a
+  watchdog in `Pipeline._recv_audio` from *transcript* delta inactivity (1.2s when the
+  source/target pair is complete, up to 5s waiting for the missing side). Do NOT use
+  audio deltas as an activity signal.
+- **Output transcripts lag input transcripts** by several seconds on the translate
+  endpoint — that's why pairing waits for both sides before firing `on_translation`.
+- **Conversational drift**: `gpt-realtime-translate` takes no instructions, and with an
+  always-on mic it sometimes *answers* instead of translating (e.g. adds 元気だよ to a
+  reply). `gpt-realtime` with the built-in interpreter instructions is the
+  higher-quality/higher-cost alternative (`api.model` in chasqui.yaml).
+- **`CHASQUI_DEBUG=1`** prints every server event type, audio delta counts, and flush
+  decisions — first thing to reach for when audio flows but transcripts don't.
 
 ---
 
