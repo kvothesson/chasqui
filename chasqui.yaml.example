@@ -21,6 +21,7 @@ device:
   mic: "USB PnP Audio Device"       # throat mic
   speaker: "USB Audio"              # outward speaker (Japanese person hears)
   earphone: "Headphones (Bone)"     # bone conduction (user hears)
+  loopback: "CABLE-B Output"        # capture device for the other side's audio (bridge/meet IN)
   ptt_mode: vad                     # vad | hold | toggle
 
 pair_mode:
