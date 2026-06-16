@@ -25,7 +25,7 @@ from typing import Optional
 from ..core.audio import MicStream, LoopbackStream, SpeakerStream
 from .base import BaseAdapter, _safe_print
 
-_CABLE_INPUT_HINTS = ["CABLE Input"]  # playback device → chasqui sends translated audio here
+_CABLE_INPUT_HINTS = ["CABLE Input (VB-Audio Virtual"]  # playback device → chasqui sends translated audio here
 
 # Recording-side hints for the SECOND cable (IN direction). Deliberately
 # excludes plain "CABLE Output" — that is the OUT cable carrying our own
