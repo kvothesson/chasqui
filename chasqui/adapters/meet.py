@@ -4,8 +4,9 @@ Identical plumbing to the bridge adapter (two parallel pipelines over VB-Audio
 Cable); only the user-facing instructions differ.
 
 Setup:
-  1. Install VB-Audio Cable: https://vb-audio.com/Cable/
-  2. In Meet / Zoom, select "CABLE Output" as your microphone.
+  1. Install VB-Audio Cable (OUT) and a second cable for IN
+     (Hi-Fi Cable or VB-Cable A+B — vb-audio.com).
+  2. In Meet / Zoom: microphone = "CABLE Output", speaker = the second cable.
   3. Run: chasqui listen --adapter meet
 """
 
