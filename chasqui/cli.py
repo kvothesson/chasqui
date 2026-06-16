@@ -36,6 +36,7 @@ def _run_adapter(cfg: Config) -> None:
         "media":       "chasqui.adapters.media.MediaAdapter",
         "bridge":      "chasqui.adapters.bridge.BridgeAdapter",
         "meet":        "chasqui.adapters.meet.MeetAdapter",
+        "headset":     "chasqui.adapters.headset.HeadsetAdapter",
     }
 
     module_path = adapter_map.get(cfg.adapter)
@@ -81,7 +82,7 @@ def cli():
 @click.option("--to", "target_lang", default=None, metavar="LANG",
               help="Target language code")
 @click.option("--adapter", default=None,
-              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge", "meet"]),
+              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge", "meet", "headset"]),
               help="Input/output adapter (default: from config, else text)")
 @click.option("--voice", default=None,
               type=click.Choice(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]),
@@ -153,6 +154,116 @@ def translate(text, source_lang, target_lang, config_path):
         click.echo(adapter.translate_once(text))
     else:
         adapter.run()
+
+
+@cli.command()
+@click.option("--from", "source_lang", default=None, metavar="LANG",
+              help="Source language (default: from config, else es)")
+@click.option("--to", "target_lang", default=None, metavar="LANG",
+              help="Target language (default: from config, else ja)")
+@click.option("--config", "config_path", default=None)
+def check(source_lang, target_lang, config_path):
+    """Smoke-test the translation pipeline without mic or speakers.
+
+    \b
+    Synthesizes a phrase via TTS, runs it through the realtime pipeline,
+    and prints PASS/FAIL with the translated transcript.
+    No audio hardware required.
+    """
+    import threading
+    from .core.audio import BytesStream, NullStream
+    from .core.pipeline import Pipeline
+
+    cfg = _load_config(config_path, source_lang=source_lang, target_lang=target_lang)
+    try:
+        cfg.validate()
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    src_name = LANG_NAMES.get(cfg.source_lang, cfg.source_lang)
+    tgt_name = LANG_NAMES.get(cfg.target_lang, cfg.target_lang)
+
+    _TEST_PHRASES = {
+        "es": "hola, ¿cómo estás?",
+        "en": "hello, how are you?",
+        "ja": "こんにちは、お元気ですか？",
+        "fr": "bonjour, comment allez-vous?",
+        "pt": "olá, como você está?",
+        "zh": "你好，你好吗？",
+        "de": "hallo, wie geht es dir?",
+        "it": "ciao, come stai?",
+        "ko": "안녕하세요, 잘 지내세요?",
+    }
+    phrase = _TEST_PHRASES.get(cfg.source_lang, f"hello in {src_name}")
+
+    click.echo(f"\nChasqui check — {src_name} → {tgt_name}")
+    click.echo(f"  Model:  {cfg.model}")
+    click.echo(f"  Phrase: {phrase!r}")
+    click.echo()
+
+    # Step 1: synthesize test audio via OpenAI TTS (PCM16 24kHz, same as pipeline)
+    click.echo("  [1/3] Synthesizing test audio... ", nl=False)
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=cfg.api_key)
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=phrase,
+            response_format="pcm",
+        )
+        pcm_data = response.content
+        click.echo(f"ok  ({len(pcm_data) // 48} ms)")
+    except Exception as e:
+        click.echo(f"FAIL\n\n  Error: {e}", err=True)
+        sys.exit(1)
+
+    # Step 2: run through pipeline, collect first translation event
+    click.echo("  [2/3] Running pipeline... ", nl=False)
+
+    result: dict = {}
+    got_translation = threading.Event()
+
+    def _on_translation(event):
+        if event.target_text and not got_translation.is_set():
+            result["event"] = event
+            got_translation.set()
+
+    pipeline = Pipeline(
+        source_lang=cfg.source_lang,
+        target_lang=cfg.target_lang,
+        api_key=cfg.api_key,
+        model=cfg.model,
+        on_translation=_on_translation,
+    )
+
+    t = threading.Thread(
+        target=pipeline.run,
+        args=(BytesStream(pcm_data), NullStream()),
+        daemon=True,
+    )
+    t.start()
+
+    if got_translation.wait(timeout=30):
+        pipeline.stop()
+        t.join(timeout=5)
+        ev = result["event"]
+        click.echo(f"ok  ({ev.latency_ms:.0f} ms)")
+        click.echo()
+        click.echo("  [3/3] Result:")
+        click.echo(f"    {cfg.source_lang.upper()}: {ev.source_text}")
+        click.echo(f"    {cfg.target_lang.upper()}: {ev.target_text}")
+        click.echo()
+        click.echo("  PASS")
+    else:
+        pipeline.stop()
+        t.join(timeout=5)
+        click.echo("timeout")
+        click.echo()
+        click.echo("  FAIL: no translation received within 30s")
+        click.echo("  Tip:  CHASQUI_DEBUG=1 chasqui check", err=True)
+        sys.exit(1)
 
 
 @cli.command()
