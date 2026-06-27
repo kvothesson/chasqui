@@ -25,7 +25,7 @@ class MediaAdapter(BaseAdapter):
         print(f"  Mode: {mode}")
         print("  Play a video — translation goes to your earphone.\n")
 
-        loopback = LoopbackStream(device=self.config.device.mic)
+        loopback = LoopbackStream(device=self.config.device.loopback)
 
         if mode == "subtitle":
             out = NullStream()
