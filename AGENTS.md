@@ -16,12 +16,13 @@ chasqui/
     config.py       ← Config dataclass, loads chasqui.yaml
     session.py      ← Turn log + session export
     constants.py    ← LANG_NAMES, API endpoint URLs
+    windevice.py    ← Windows default audio output switcher (PowerShell AudioDeviceCmdlets)
   adapters/
     base.py         ← BaseAdapter (all adapters inherit from this)
     text.py         ← Text-only demo adapter
     device.py       ← Single physical mic/speaker
     virtual_mic.py  ← Routes output to a virtual mic (VB-Audio Cable)
-    media.py        ← Translates a media file
+    media.py        ← System audio loopback translation (YouTube, videos); auto-switches Windows output
     bridge.py       ← Two-device LAN pair mode
     meet.py         ← Thin subclass of BridgeAdapter with Meet-specific instructions
   cli.py            ← Click CLI: listen, translate, devices, langs, init
