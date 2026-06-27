@@ -20,7 +20,7 @@ chasqui listen --from es --to ja
 | `text` | Keyboard in, terminal out — silent mode, accessibility, testing | ✅ Working |
 | `virtual-mic` | Google Meet, Zoom, Teams, ChatGPT Voice (one-way: your voice, translated) | ✅ Working — validated end-to-end with ChatGPT Voice |
 | `bridge` / `meet` | Bidirectional translation for any voice app (needs VB-Audio Cable) | OUT ✅ / IN in progress |
-| `media` | YouTube, videos, any system audio → your language | Implemented, untested |
+| `media` | YouTube, videos, any system audio → your language | ✅ Working — auto-switches Windows audio output to VB-Cable on start, restores on exit |
 | `device` | Physical pendant (mic + speaker) — the **eco** hardware | Awaiting hardware |
 
 ## Commands
