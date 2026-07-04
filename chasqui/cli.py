@@ -89,9 +89,17 @@ def cli():
               help="GPT-4o voice for translated output")
 @click.option("--context", default=None,
               help="Conversation context (e.g. 'Tourist in Japan, casual conversation')")
+@click.option("--mic", default=None, metavar="DEVICE",
+              help="Microphone device name or index — for separate mic/headphone "
+                   "setups (see 'chasqui devices')")
+@click.option("--earphone", default=None, metavar="DEVICE",
+              help="Output device for the translated audio YOU hear "
+                   "(default: system default output)")
+@click.option("--loopback", default=None, metavar="DEVICE",
+              help="Capture device for the other side's audio (bridge/meet/headset IN)")
 @click.option("--config", "config_path", default=None,
               help="Path to chasqui.yaml")
-def listen(source_lang, target_lang, adapter, voice, context, config_path):
+def listen(source_lang, target_lang, adapter, voice, context, mic, earphone, loopback, config_path):
     """Start real-time audio translation.
 
     \b
@@ -99,6 +107,7 @@ def listen(source_lang, target_lang, adapter, voice, context, config_path):
       chasqui listen                          # es→ja, text adapter
       chasqui listen --from es --to ja --adapter virtual-mic
       chasqui listen --adapter device --voice nova
+      chasqui listen --adapter headset --mic "USB Micro" --earphone "Auriculares"
     """
     cfg = _load_config(
         config_path,
@@ -108,6 +117,12 @@ def listen(source_lang, target_lang, adapter, voice, context, config_path):
         voice=voice,
         context=context,
     )
+    if mic is not None:
+        cfg.device.mic = mic
+    if earphone is not None:
+        cfg.device.earphone = earphone
+    if loopback is not None:
+        cfg.device.loopback = loopback
 
     try:
         cfg.validate()

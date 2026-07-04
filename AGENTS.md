@@ -25,6 +25,7 @@ chasqui/
     media.py        ← System audio loopback translation (YouTube, videos); auto-switches Windows output
     bridge.py       ← Two-device LAN pair mode
     meet.py         ← Thin subclass of BridgeAdapter with Meet-specific instructions
+    headset.py      ← Bidirectional via Stereo Mix; auto-switches Windows default mic
   cli.py            ← Click CLI: listen, translate, devices, langs, init
 ```
 
@@ -117,6 +118,15 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   higher-quality/higher-cost alternative (`api.model` in chasqui.yaml).
 - **`CHASQUI_DEBUG=1`** prints every server event type, audio delta counts, and flush
   decisions — first thing to reach for when audio flows but transcripts don't.
+- **Windows device names come in two lengths**: PowerShell/AudioDeviceCmdlets report
+  full names ("CABLE Output (VB-Audio Virtual Cable)") but PortAudio truncates to
+  ~31 chars on MME. Pass names through `core.audio.resolve_device()` before giving
+  them to `MicStream`/`SpeakerStream`, or the lookup silently fails.
+- **AudioDeviceCmdlets params are `-Recording` / `-Playback`** (they return the
+  *default* device of that type). `-RecordingDefault` does not exist — it fails with
+  AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a
+  silent no-op for weeks. Default-device switching lives in `core/windevice.py`; use
+  it instead of inlining PowerShell.
 
 ---
 
