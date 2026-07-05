@@ -14,12 +14,8 @@ Setup (one-time):
      chasqui will auto-set CABLE Output as your default mic and restore it on exit.
 """
 
-import subprocess
-import sys
-from typing import Optional
-
-from ..core.audio import MicStream, LoopbackStream, SpeakerStream
-from .base import BaseAdapter, _safe_print
+from ..core.audio import MicStream, LoopbackStream, SpeakerStream, resolve_device
+from ..core.windevice import get_default_input_name, set_default_input
 from .bridge import BridgeAdapter, _CABLE_INPUT_HINTS
 
 # IN capture priority: Stereo Mix (built-in, no second cable) → Hi-Fi Cable → CABLE-B
@@ -29,36 +25,6 @@ _HEADSET_LOOPBACK_HINTS = [
     "Hi-Fi Cable Output",
     "CABLE-B Output",
 ]
-
-
-def _get_default_mic() -> Optional[str]:
-    if sys.platform != "win32":
-        return None
-    try:
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             "Get-AudioDevice -Recordingdefault | Select-Object -ExpandProperty Name"],
-            capture_output=True, text=True, timeout=5,
-        )
-        return result.stdout.strip() or None
-    except Exception:
-        return None
-
-
-def _set_default_mic(name_fragment: str) -> bool:
-    if sys.platform != "win32":
-        return False
-    try:
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             f"Get-AudioDevice -List | "
-             f"Where-Object {{$_.Name -like '*{name_fragment}*' -and $_.Type -eq 'Recording'}} | "
-             f"Select-Object -First 1 | Set-AudioDevice"],
-            capture_output=True, text=True, timeout=5,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
 
 
 class HeadsetAdapter(BridgeAdapter):
@@ -73,46 +39,72 @@ class HeadsetAdapter(BridgeAdapter):
         cable_input = self._find_device(_CABLE_INPUT_HINTS, self.config.device.speaker, require_output=True)
         in_capture  = self._find_device(_HEADSET_LOOPBACK_HINTS, self.config.device.loopback, require_output=False)
 
-        print(f"  OUT  real mic → {self.config.source_lang}→{self.config.target_lang} → {cable_input or 'default speaker'}")
+        # Resolve the REAL mic explicitly BEFORE switching the Windows default
+        # to CABLE Output. MicStream(device=None) follows the default input,
+        # which after the switch is CABLE Output — chasqui's own translated
+        # voice. Combo headsets got away with it because PortAudio snapshots
+        # devices at import; separate mic/headphone setups need this pinned.
+        original_mic = get_default_input_name()
+        # resolve_device also for the explicit --mic: full Windows names match
+        # several host-API entries (MME/DirectSound/WASAPI/WDM-KS) and raw
+        # sounddevice lookup dies with "Multiple input devices found".
+        mic_device = resolve_device(self.config.device.mic, want_input=True)
+        if mic_device is None and original_mic and "cable" not in original_mic.lower():
+            mic_device = resolve_device(original_mic, want_input=True)
+        mic_label = self.config.device.mic or original_mic or "default mic"
+        earphone = resolve_device(self.config.device.earphone, want_input=False)
+
+        print(f"  OUT  {mic_label} → {self.config.source_lang}→{self.config.target_lang} → {cable_input or 'default speaker'}")
         print(f"  IN   {in_capture or '(no loopback found)'} → {self.config.target_lang}→{self.config.source_lang} → {self.config.device.earphone or 'default speaker'}")
 
         if not cable_input:
             print("\n  [warn] CABLE Input not found — install VB-Audio Cable and rerun.")
+        if mic_device is None and original_mic and "cable" in original_mic.lower():
+            print("\n  [warn] Windows default mic is a virtual cable — chasqui would")
+            print("         capture its own translated voice (feedback loop).")
+            print("         Pass your real mic:  chasqui listen --adapter headset --mic \"...\"")
+            print("         (see 'chasqui devices' for names)")
         if not in_capture:
             print("\n  [warn] No loopback capture device found.")
             print("         Enable 'Stereo Mix' in Windows Sound > Recording devices,")
             print("         or install Hi-Fi Cable (vb-audio.com).")
             print("         IN translation is DISABLED for this session.")
         print()
-        print("  Put on headphones. In your app (Meet, Discord, ChatGPT...):")
+        print("  Put on headphones — with open speakers the mic re-captures the")
+        print("  translation and it loops. Separate mic + headphones? Pick them:")
+        print("    chasqui listen --adapter headset --mic \"...\" --earphone \"...\"")
+        print()
+        print("  In your app (Meet, Discord, ChatGPT...):")
         print("    microphone → 'CABLE Output'  (set once as Windows default mic)")
         print("  (Ctrl+C to stop)\n")
 
         # Auto-switch Windows default mic to CABLE Output, restore on exit
-        original_mic = _get_default_mic()
         switched = False
         if cable_input and original_mic and "cable" not in original_mic.lower():
-            if _set_default_mic("CABLE Output"):
+            if set_default_input("CABLE Output"):
                 switched = True
                 print(f"  [auto] Windows default mic → CABLE Output  (was: {original_mic})\n")
 
         try:
             out_tuple = (
                 self._make_pipeline(),
-                MicStream(device=self.config.device.mic),
+                MicStream(device=mic_device),
                 SpeakerStream(device=cable_input),
             )
             in_tuple = None
             if in_capture:
                 in_tuple = (
                     self._make_pipeline_reverse(),
-                    LoopbackStream(device=in_capture),
-                    SpeakerStream(device=self.config.device.earphone),
+                    LoopbackStream(device=resolve_device(in_capture, want_input=True)),
+                    SpeakerStream(device=earphone),
                 )
             self._run_parallel(out_tuple, in_tuple)
         finally:
             if switched and original_mic:
-                if _set_default_mic(original_mic):
+                if set_default_input(original_mic):
                     print(f"\n  [auto] Restored Windows default mic → {original_mic}")
+                else:
+                    print(f"\n  [warn] Could not restore default mic (was: {original_mic}).")
+                    print("         Restore it manually in Windows Sound > Recording devices.")
 
         self._save_session_if_needed()

@@ -19,7 +19,8 @@ chasqui listen --from es --to ja
 |---|---|---|
 | `text` | Keyboard in, terminal out — silent mode, accessibility, testing | ✅ Working |
 | `virtual-mic` | Google Meet, Zoom, Teams, ChatGPT Voice (one-way: your voice, translated) | ✅ Working — validated end-to-end with ChatGPT Voice |
-| `bridge` / `meet` | Bidirectional translation for any voice app (needs VB-Audio Cable) | OUT ✅ / IN in progress |
+| `bridge` / `meet` | Bidirectional translation for any voice app (needs VB-Audio Cable) | OUT ✅ / IN ✅ (same plumbing as headset, validated there) |
+| `headset` | Bidirectional for any app — Stereo Mix or Hi-Fi Cable for IN capture | ✅ **Validated end-to-end with ChatGPT Voice (2026-07-05), both directions.** Auto-switches default mic, restores on exit; separate mic/headphone via `--mic` / `--earphone` |
 | `media` | YouTube, videos, any system audio → your language | ✅ Working — auto-switches Windows audio output to VB-Cable on start, restores on exit |
 | `device` | Physical pendant (mic + speaker) — the **eco** hardware | Awaiting hardware |
 
@@ -28,6 +29,8 @@ chasqui listen --from es --to ja
 ```bash
 chasqui translate "¿Dónde está la estación?"   # one-shot text translation
 chasqui listen --adapter device                # live audio translation
+chasqui listen --adapter headset --mic "USB Micro" --earphone "Auriculares"
+                                               # separate mic + headphones
 chasqui devices                                # list audio devices, detect virtual mics
 chasqui langs                                  # supported language codes
 chasqui init                                   # generate chasqui.yaml starter config

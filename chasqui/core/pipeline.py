@@ -182,22 +182,33 @@ class Pipeline:
         }
 
     def _build_realtime_session(self) -> dict:
-        """Session format for gpt-realtime (general model)."""
+        """Session format for gpt-realtime (general model), GA shape.
+
+        The GA API rejects the old beta fields ("Unknown parameter:
+        'session.modalities'"): modalities/voice/formats/turn_detection now
+        live under output_modalities and the audio.input / audio.output trees.
+        """
         return {
             "type": "session.update",
             "session": {
                 "type": "realtime",
-                "modalities": ["audio", "text"],
+                "output_modalities": ["audio"],
                 "instructions": self._build_instructions(),
-                "voice": self.voice,
-                "input_audio_format": "pcm16",
-                "output_audio_format": "pcm16",
-                "input_audio_transcription": {"model": "gpt-realtime-whisper"},
-                "turn_detection": {
-                    "type": "server_vad",
-                    "threshold": self.vad_threshold,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": self.vad_silence_ms,
+                "audio": {
+                    "input": {
+                        "format": {"type": "audio/pcm", "rate": 24000},
+                        "transcription": {"model": "gpt-realtime-whisper"},
+                        "turn_detection": {
+                            "type": "server_vad",
+                            "threshold": self.vad_threshold,
+                            "prefix_padding_ms": 300,
+                            "silence_duration_ms": self.vad_silence_ms,
+                        },
+                    },
+                    "output": {
+                        "format": {"type": "audio/pcm", "rate": 24000},
+                        "voice": self.voice,
+                    },
                 },
             },
         }
