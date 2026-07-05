@@ -26,11 +26,24 @@ def test_realtime_session_has_instructions_and_voice():
     assert "interpreter" in s["instructions"]
     assert "Spanish" in s["instructions"]
     assert "Japanese" in s["instructions"]
-    # GA shape: voice/turn_detection live under audio.output / audio.input
-    assert "modalities" not in s
+    # GA shape: voice/turn_detection live under audio.output / audio.input.
+    # Do NOT "fix" a failure here by restoring the old beta fields: the live
+    # GA API rejects them with "Unknown parameter: 'session.modalities'"
+    # (verified against the real endpoint 2026-07-05). If this test fails,
+    # your change broke the session format — fix pipeline.py, not the test.
+    assert "modalities" not in s, (
+        "'modalities' is a pre-GA field; the live API rejects it with "
+        "'Unknown parameter'. The GA field is 'output_modalities'."
+    )
     assert s["output_modalities"] == ["audio"]
-    assert s["audio"]["output"]["voice"] == p.voice
-    assert s["audio"]["input"]["turn_detection"]["type"] == "server_vad"
+    assert s["audio"]["output"]["voice"] == p.voice, (
+        "GA moved 'voice' under audio.output; a top-level 'voice' is "
+        "rejected by the live API."
+    )
+    assert s["audio"]["input"]["turn_detection"]["type"] == "server_vad", (
+        "GA moved 'turn_detection' under audio.input; the top-level form is "
+        "rejected by the live API."
+    )
 
 
 def test_context_appended_to_instructions():
