@@ -325,7 +325,7 @@ def init(out):
     template = """\
 api:
   key: ${OPENAI_API_KEY}
-  model: gpt-4o-realtime-preview
+  model: gpt-realtime-translate   # or gpt-realtime (higher quality, higher cost)
 
 session:
   source_lang: es

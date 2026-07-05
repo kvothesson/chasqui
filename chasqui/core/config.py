@@ -40,7 +40,7 @@ class LoggingConfig:
 class Config:
     # API
     api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
-    model: str = "gpt-4o-realtime-preview"
+    model: str = "gpt-realtime-translate"
     text_model: str = "gpt-4o-mini"   # Chat Completions model for the text adapter
 
     # Translation
