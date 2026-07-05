@@ -16,7 +16,7 @@ Setup (one-time):
 
 from ..core.audio import MicStream, LoopbackStream, SpeakerStream, refresh_devices, resolve_device
 from ..core.windevice import get_default_input_name, set_default_input
-from .bridge import BridgeAdapter, _CABLE_INPUT_HINTS
+from .bridge import BridgeAdapter, _CABLE_INPUT_HINTS, _IN_PLAYBACK_HINTS
 
 # IN capture priority: Stereo Mix (built-in, no second cable) → Hi-Fi Cable → CABLE-B
 _HEADSET_LOOPBACK_HINTS = [
@@ -85,6 +85,14 @@ class HeadsetAdapter(BridgeAdapter):
         print()
         print("  In your app (Meet, Discord, ChatGPT...):")
         print("    microphone → 'CABLE Output'  (set once as Windows default mic)")
+        if in_capture:
+            if any(h.lower() in in_capture.lower() for h in ("stereo mix", "what u hear")):
+                print("    speaker    → leave as your default output (Stereo Mix captures it)")
+            else:
+                in_playback = self._find_device(_IN_PLAYBACK_HINTS, None, require_output=True)
+                print(f"    speaker    → '{in_playback or in_capture}'")
+                print("                 (browser apps: Windows Settings > Sound >")
+                print("                  App volume and device preferences > your browser)")
         print("  (Ctrl+C to stop)\n")
 
         if switched:
