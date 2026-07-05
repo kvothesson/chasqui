@@ -22,7 +22,7 @@ Setup:
 import threading
 from typing import Optional
 
-from ..core.audio import MicStream, LoopbackStream, SpeakerStream
+from ..core.audio import MicStream, LoopbackStream, SpeakerStream, resolve_device
 from .base import BaseAdapter, _safe_print
 
 _CABLE_INPUT_HINTS = ["CABLE Input (VB-Audio Virtual"]  # playback device → chasqui sends translated audio here
@@ -35,6 +35,10 @@ _CABLE_INPUT_HINTS = ["CABLE Input (VB-Audio Virtual"]  # playback device → ch
 _IN_CAPTURE_HINTS = [
     "CABLE-B Output",
     "Hi-Fi Cable Output",
+    # Last resort — no second cable installed: capture the system default
+    # output directly. Only works if the app plays to the default output.
+    "Stereo Mix",
+    "What U Hear",
 ]
 
 # Playback-side hints for the second cable — what the user selects as the
@@ -63,29 +67,33 @@ class BridgeAdapter(BaseAdapter):
         if not cable_input:
             print("\n  [warn] CABLE Input not found — install VB-Audio Cable and rerun.")
         if not in_capture:
-            print("\n  [warn] No second virtual cable found for the IN direction.")
-            print("         Install VB-Audio Point, VB-Cable A+B, or Hi-Fi Cable")
-            print("         (vb-audio.com), or set device.loopback in chasqui.yaml.")
+            print("\n  [warn] No capture device found for the IN direction.")
+            print("         Enable 'Stereo Mix' in Windows Sound > Recording devices,")
+            print("         install a second cable (VB-Cable A+B or Hi-Fi Cable,")
+            print("         vb-audio.com), or set device.loopback in chasqui.yaml.")
             print("         IN translation is DISABLED for this session.")
         print()
         print(f"  In {self.app_label}:")
         print("    microphone → 'CABLE Output'")
         if in_capture:
-            print(f"    speaker    → '{in_playback or in_capture}'")
+            if any(h.lower() in in_capture.lower() for h in ("stereo mix", "what u hear")):
+                print("    speaker    → leave as your default output (Stereo Mix captures it)")
+            else:
+                print(f"    speaker    → '{in_playback or in_capture}'")
         print("  (Ctrl+C to stop)\n")
 
         # OUT pipeline: my mic → translated → CABLE Input (they hear me in their language)
         out_tuple = (
             self._make_pipeline(),
-            MicStream(device=self.config.device.mic),
+            MicStream(device=resolve_device(self.config.device.mic, want_input=True)),
             SpeakerStream(device=cable_input),
         )
         in_tuple = None
         if in_capture:
             in_tuple = (
                 self._make_pipeline_reverse(),
-                LoopbackStream(device=in_capture),
-                SpeakerStream(device=self.config.device.earphone),
+                LoopbackStream(device=resolve_device(in_capture, want_input=True)),
+                SpeakerStream(device=resolve_device(self.config.device.earphone, want_input=False)),
             )
 
         self._run_parallel(out_tuple, in_tuple)

@@ -13,6 +13,37 @@ import numpy as np
 from .constants import SAMPLE_RATE, CHANNELS, SAMPLE_WIDTH, CHUNK_FRAMES, CHUNK_SIZE
 
 
+def resolve_device(name: Optional[str | int], want_input: bool = True) -> Optional[str | int]:
+    """Resolve a device name to a sounddevice index.
+
+    Windows APIs report full device names ("Micrófono (2- USB Audio Device)")
+    while PortAudio truncates them (~31 chars on MME), so exact or substring
+    matching can fail in either direction. Match case-insensitive by prefix
+    both ways against devices of the right kind; fall back to the original
+    value so sounddevice's own matching still gets a chance.
+    """
+    if name is None or isinstance(name, int):
+        return name
+    text = str(name).strip()
+    if text.isdigit():
+        return int(text)
+    try:
+        import sounddevice as sd
+        target = text.lower()
+        for i, dev in enumerate(sd.query_devices()):
+            channels = dev["max_input_channels"] if want_input else dev["max_output_channels"]
+            if channels == 0:
+                continue
+            dev_name = dev["name"].strip().lower()
+            if not dev_name:
+                continue
+            if dev_name.startswith(target) or target.startswith(dev_name) or target in dev_name:
+                return i
+    except Exception:
+        pass
+    return name
+
+
 class AudioStream(abc.ABC):
     """Abstract base for any audio source or destination."""
 
