@@ -130,8 +130,14 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
 - **Never pin device indices in chasqui.yaml** — Windows MME reorders indices when
   the default device changes (the default jumps to the first slot of its type), and
   chasqui's own adapters switch defaults at startup (media: output, headset: input).
-  Use names; `resolve_device()` maps them at start. Within one process PortAudio's
-  snapshot keeps indices stable, so resolve-then-switch is safe.
+  Use names; `resolve_device()` maps them at start.
+- **The renumbering happens LIVE, mid-process** — waveIn/waveOut IDs shift the
+  moment the default changes, but PortAudio keeps its stale snapshot, so an index
+  resolved *before* a switch opens a *different* device after it (verified: the
+  headset adapter's real-mic index pointed at CABLE Output post-switch → chasqui
+  listened to its own output and heard nothing). Rule: **switch the default first,
+  then `refresh_devices()` (re-inits PortAudio), then resolve names to indices.**
+  Never call `refresh_devices()` while streams are open.
 - **PowerShell output must be decoded as UTF-8** (`core/windevice.py` forces it on
   both sides). With the default cp1252 decode, "Micrófono" came back as
   "MicrÃ³fono", which made the default-mic *restore* silently no-op (the `-like`

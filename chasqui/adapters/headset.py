@@ -14,7 +14,7 @@ Setup (one-time):
      chasqui will auto-set CABLE Output as your default mic and restore it on exit.
 """
 
-from ..core.audio import MicStream, LoopbackStream, SpeakerStream, resolve_device
+from ..core.audio import MicStream, LoopbackStream, SpeakerStream, refresh_devices, resolve_device
 from ..core.windevice import get_default_input_name, set_default_input
 from .bridge import BridgeAdapter, _CABLE_INPUT_HINTS
 
@@ -36,22 +36,31 @@ class HeadsetAdapter(BridgeAdapter):
     def run(self) -> None:
         self._print_header(self.header)
 
+        # _find_device returns NAMES, which survive the default-mic switch
+        # below; only name→index resolution has to wait until after it.
         cable_input = self._find_device(_CABLE_INPUT_HINTS, self.config.device.speaker, require_output=True)
         in_capture  = self._find_device(_HEADSET_LOOPBACK_HINTS, self.config.device.loopback, require_output=False)
 
-        # Resolve the REAL mic explicitly BEFORE switching the Windows default
-        # to CABLE Output. MicStream(device=None) follows the default input,
-        # which after the switch is CABLE Output — chasqui's own translated
-        # voice. Combo headsets got away with it because PortAudio snapshots
-        # devices at import; separate mic/headphone setups need this pinned.
         original_mic = get_default_input_name()
-        # resolve_device also for the explicit --mic: full Windows names match
-        # several host-API entries (MME/DirectSound/WASAPI/WDM-KS) and raw
-        # sounddevice lookup dies with "Multiple input devices found".
+        mic_label = self.config.device.mic or original_mic or "default mic"
+
+        # Switch the Windows default mic FIRST, then refresh PortAudio and
+        # resolve indices. Windows renumbers live waveIn IDs on the switch
+        # (the new default jumps to slot 1), so an index resolved before it
+        # opens the wrong device after — the real-mic index ends up pointing
+        # at CABLE Output and chasqui listens to its own translated voice.
+        switched = False
+        if cable_input and original_mic and "cable" not in original_mic.lower():
+            if set_default_input("CABLE Output"):
+                switched = True
+        refresh_devices()
+
+        # resolve_device also matters for the explicit --mic: full Windows
+        # names match several host-API entries (MME/DirectSound/WASAPI/WDM-KS)
+        # and raw sounddevice lookup dies with "Multiple input devices found".
         mic_device = resolve_device(self.config.device.mic, want_input=True)
         if mic_device is None and original_mic and "cable" not in original_mic.lower():
             mic_device = resolve_device(original_mic, want_input=True)
-        mic_label = self.config.device.mic or original_mic or "default mic"
         earphone = resolve_device(self.config.device.earphone, want_input=False)
 
         print(f"  OUT  {mic_label} → {self.config.source_lang}→{self.config.target_lang} → {cable_input or 'default speaker'}")
@@ -78,12 +87,10 @@ class HeadsetAdapter(BridgeAdapter):
         print("    microphone → 'CABLE Output'  (set once as Windows default mic)")
         print("  (Ctrl+C to stop)\n")
 
-        # Auto-switch Windows default mic to CABLE Output, restore on exit
-        switched = False
-        if cable_input and original_mic and "cable" not in original_mic.lower():
-            if set_default_input("CABLE Output"):
-                switched = True
-                print(f"  [auto] Windows default mic → CABLE Output  (was: {original_mic})\n")
+        if switched:
+            print(f"  [auto] Windows default mic → CABLE Output  (was: {original_mic})")
+            print("         Open/restart your app's voice session AFTER this point —")
+            print("         apps grab the default mic when the session starts.\n")
 
         try:
             out_tuple = (
