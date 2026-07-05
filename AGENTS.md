@@ -25,7 +25,7 @@ chasqui/
     media.py        ← System audio loopback translation (YouTube, videos); auto-switches Windows output
     bridge.py       ← Two-device LAN pair mode
     meet.py         ← Thin subclass of BridgeAdapter with Meet-specific instructions
-    headset.py      ← Bidirectional via Stereo Mix; auto-switches Windows default mic
+    headset.py      ← Bidirectional via Stereo Mix / Hi-Fi Cable; auto-switches Windows default mic
   cli.py            ← Click CLI: listen, translate, devices, langs, init
 ```
 
@@ -122,6 +122,28 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   full names ("CABLE Output (VB-Audio Virtual Cable)") but PortAudio truncates to
   ~31 chars on MME. Pass names through `core.audio.resolve_device()` before giving
   them to `MicStream`/`SpeakerStream`, or the lookup silently fails.
+- **Raw name strings crash sounddevice**: every device exists 3-4× (MME/DirectSound/
+  WASAPI/WDM-KS), so `sd.InputStream(device="Micrófono (HyperX ...)")` dies with
+  "Multiple input devices found". `resolve_device()` returns a single index —
+  ALL user-provided device values (`--mic`, `--earphone`, `--loopback`,
+  chasqui.yaml) must go through it.
+- **Never pin device indices in chasqui.yaml** — Windows MME reorders indices when
+  the default device changes (the default jumps to the first slot of its type), and
+  chasqui's own adapters switch defaults at startup (media: output, headset: input).
+  Use names; `resolve_device()` maps them at start. Within one process PortAudio's
+  snapshot keeps indices stable, so resolve-then-switch is safe.
+- **PowerShell output must be decoded as UTF-8** (`core/windevice.py` forces it on
+  both sides). With the default cp1252 decode, "Micrófono" came back as
+  "MicrÃ³fono", which made the default-mic *restore* silently no-op (the `-like`
+  match found nothing) and broke `resolve_device()` on the default-mic name.
+- **MME capture of CABLE Output can read pure noise while other streams are open**
+  (seen with 4+ concurrent streams in one process). Real apps capture via
+  WASAPI/DirectSound and hear the audio fine — verify with a DirectSound-index
+  capture before concluding the cable is silent.
+- **gpt-realtime (GA) rejects the old beta session fields** ("Unknown parameter:
+  'session.modalities'"): voice/formats/turn_detection now live under
+  `output_modalities` + `audio.input`/`audio.output` (see
+  `Pipeline._build_realtime_session`).
 - **AudioDeviceCmdlets params are `-Recording` / `-Playback`** (they return the
   *default* device of that type). `-RecordingDefault` does not exist — it fails with
   AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a

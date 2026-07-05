@@ -126,9 +126,25 @@ Dos pipelines corriendo en paralelo:
 pipeline OUT: tu mic real   → ES→JA → CABLE Input     (ellos te escuchan en japonés)
 pipeline IN:  audio de la app → JA→ES → earphone       (vos escuchás en español)
 ```
-**Estado: OUT ✅ funciona. IN pendiente** — requiere capturar el audio de la app:
-segundo cable (VB-Cable A+B) o Stereo Mix, configurado vía `device.loopback` en chasqui.yaml.
-Es el **próximo paso**: obtener audio en japonés y escucharlo directo en español.
+**Estado: OUT ✅ / IN ✅** — el plumbing bidireccional compartido quedó validado
+end-to-end vía el adapter `headset` (2026-07-05). Requiere segundo cable
+(VB-Cable A+B o Hi-Fi Cable) o Stereo Mix para el IN, vía `device.loopback`.
+
+---
+
+### 6.3b `headset` — Bidireccional, cero fricción
+
+Subclase de `BridgeAdapter`. Además del plumbing bidireccional:
+auto-setea CABLE Output como mic default de Windows al arrancar (restaura al
+salir) y para el IN cae en cascada: Stereo Mix → What U Hear → Hi-Fi Cable →
+CABLE-B. Soporta mic/auricular separados con `--mic` / `--earphone`.
+
+**Estado: ✅ validado end-to-end con ChatGPT Voice (2026-07-05), ambas direcciones:**
+- **OUT**: voz ES → chasqui → voz JA por CABLE → ChatGPT Voice la entendió
+  literalmente y respondió ("はい、ちゃんと聞こえていますよ！").
+- **IN**: voz JA real de ChatGPT → Hi-Fi Cable → chasqui → transcript par
+  `[JA→ES]` + voz ES al auricular (verificado con captura del dispositivo).
+- Switch y restore del mic default verificados, incluso ante crash.
 
 ---
 

@@ -92,7 +92,7 @@ class BridgeAdapter(BaseAdapter):
         if in_capture:
             in_tuple = (
                 self._make_pipeline_reverse(),
-                LoopbackStream(device=in_capture),
+                LoopbackStream(device=resolve_device(in_capture, want_input=True)),
                 SpeakerStream(device=resolve_device(self.config.device.earphone, want_input=False)),
             )
 
