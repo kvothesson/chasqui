@@ -13,6 +13,24 @@ import numpy as np
 from .constants import SAMPLE_RATE, CHANNELS, SAMPLE_WIDTH, CHUNK_FRAMES, CHUNK_SIZE
 
 
+def refresh_devices() -> None:
+    """Re-initialize PortAudio so device indices match the current Windows order.
+
+    Windows renumbers live waveIn/waveOut IDs the moment the default device
+    changes (the new default jumps to the first slot of its type). An index
+    resolved before the change silently opens a DIFFERENT device after it —
+    e.g. the headset adapter's real mic index pointing at CABLE Output after
+    the default-mic switch. Call this after any default-device switch and
+    before resolving names to indices. Must not be called with streams open.
+    """
+    import sounddevice as sd
+    try:
+        sd._terminate()
+        sd._initialize()
+    except Exception:
+        pass
+
+
 def resolve_device(name: Optional[str | int], want_input: bool = True) -> Optional[str | int]:
     """Resolve a device name to a sounddevice index.
 

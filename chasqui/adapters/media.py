@@ -7,7 +7,7 @@ Requires loopback capture:
   macOS:   install BlackHole and set as output + capture from it
 """
 
-from ..core.audio import LoopbackStream, SpeakerStream, NullStream
+from ..core.audio import LoopbackStream, SpeakerStream, NullStream, refresh_devices, resolve_device
 from ..core.windevice import get_default_output_name, set_default_output
 from .base import BaseAdapter
 
@@ -38,12 +38,16 @@ class MediaAdapter(BaseAdapter):
                 print(f"  Warning: could not auto-switch audio output to CABLE Input.")
                 print(f"  Switch manually: Settings → Sound → Output → CABLE Input\n")
 
-        loopback = LoopbackStream(device=self.config.device.loopback)
+        # Refresh AFTER the switch: Windows renumbers device IDs when the
+        # default changes, and indices/names must resolve against the new order.
+        refresh_devices()
+
+        loopback = LoopbackStream(device=resolve_device(self.config.device.loopback, want_input=True))
 
         if mode == "subtitle":
             out = NullStream()
         else:
-            out = SpeakerStream(device=self.config.device.earphone)
+            out = SpeakerStream(device=resolve_device(self.config.device.earphone, want_input=False))
 
         loopback.start()
         if hasattr(out, "start"):
