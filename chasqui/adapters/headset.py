@@ -45,7 +45,10 @@ class HeadsetAdapter(BridgeAdapter):
         # voice. Combo headsets got away with it because PortAudio snapshots
         # devices at import; separate mic/headphone setups need this pinned.
         original_mic = get_default_input_name()
-        mic_device = self.config.device.mic
+        # resolve_device also for the explicit --mic: full Windows names match
+        # several host-API entries (MME/DirectSound/WASAPI/WDM-KS) and raw
+        # sounddevice lookup dies with "Multiple input devices found".
+        mic_device = resolve_device(self.config.device.mic, want_input=True)
         if mic_device is None and original_mic and "cable" not in original_mic.lower():
             mic_device = resolve_device(original_mic, want_input=True)
         mic_label = self.config.device.mic or original_mic or "default mic"
@@ -92,7 +95,7 @@ class HeadsetAdapter(BridgeAdapter):
             if in_capture:
                 in_tuple = (
                     self._make_pipeline_reverse(),
-                    LoopbackStream(device=in_capture),
+                    LoopbackStream(device=resolve_device(in_capture, want_input=True)),
                     SpeakerStream(device=earphone),
                 )
             self._run_parallel(out_tuple, in_tuple)
@@ -100,5 +103,8 @@ class HeadsetAdapter(BridgeAdapter):
             if switched and original_mic:
                 if set_default_input(original_mic):
                     print(f"\n  [auto] Restored Windows default mic → {original_mic}")
+                else:
+                    print(f"\n  [warn] Could not restore default mic (was: {original_mic}).")
+                    print("         Restore it manually in Windows Sound > Recording devices.")
 
         self._save_session_if_needed()

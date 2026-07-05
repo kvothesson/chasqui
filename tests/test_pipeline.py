@@ -26,8 +26,11 @@ def test_realtime_session_has_instructions_and_voice():
     assert "interpreter" in s["instructions"]
     assert "Spanish" in s["instructions"]
     assert "Japanese" in s["instructions"]
-    assert s["voice"] == p.voice
-    assert s["turn_detection"]["type"] == "server_vad"
+    # GA shape: voice/turn_detection live under audio.output / audio.input
+    assert "modalities" not in s
+    assert s["output_modalities"] == ["audio"]
+    assert s["audio"]["output"]["voice"] == p.voice
+    assert s["audio"]["input"]["turn_detection"]["type"] == "server_vad"
 
 
 def test_context_appended_to_instructions():
