@@ -32,6 +32,7 @@ chasqui/
   ui/
     runner.py       ← Session control for the GUI: worker thread + event queue (no tkinter)
     app.py          ← The Tk window
+    icon.py         ← The icon, drawn in code: PNG/ICO written with stdlib only
   cli.py            ← Click CLI: listen, ui, translate, check, devices, langs, init
 ```
 
@@ -190,6 +191,16 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
 - **There is no OpenAI endpoint for remaining credit balance.** `/v1/organization/costs`
   gives spend (not balance) and needs an *admin* key, which does not belong in
   a chasqui.yaml. "Remaining" in the UI is the user's own `pricing.budget`.
+- **Never set `iconphoto` AND `iconbitmap` on the same Tk window.** Each works
+  alone; together Tk falls back to its own default icon with no error and no
+  warning — you just get the wrong picture (verified on Tk 8.6.15, Windows).
+  `ui/app.py > _apply_icon` picks exactly one: the `.ico` on Windows, the
+  in-memory PhotoImage elsewhere.
+- **`pythonw.exe` has no `sys.stdout` or `sys.stderr` at all** (the desktop
+  shortcut launches the UI through it so no console tags along). Anything that
+  touches a stream attribute at import time must guard for `None` — the
+  unguarded `sys.stdout.encoding` in `cli.py` made double-clicking the desktop
+  icon do nothing at all, with no console to show the traceback.
 - **The UI redirects `sys.stdout` process-wide** while a session runs (adapters
   only communicate by printing). It is restored in a `finally`; if you add an
   early return there, every later print in the process disappears into a dead
