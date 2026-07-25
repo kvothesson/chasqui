@@ -58,7 +58,18 @@ class MediaAdapter(BaseAdapter):
         # default changes, and indices/names must resolve against the new order.
         refresh_devices()
 
-        loopback = LoopbackStream(device=resolve_device(self.config.device.loopback, want_input=True))
+        if not capture:
+            print("\n  [warn] No loopback capture device found.")
+            print("         Enable 'Stereo Mix' in Windows Sound > Recording devices,")
+            print("         install VB-Audio Cable, or set device.loopback in chasqui.yaml.")
+            print("         Without one, chasqui would capture the default input —")
+            print("         your MICROPHONE — and translate you instead of the video.\n")
+
+        # The device found above, not the raw config value: with no explicit
+        # device.loopback that value is None, and LoopbackStream(None) opens
+        # the default input — the mic. Media mode would then translate the
+        # user instead of what they are watching.
+        loopback = LoopbackStream(device=resolve_device(capture, want_input=True))
 
         # Earphone: an explicit choice wins. With none set, fall back to the
         # user's ORIGINAL output — NOT the default, which is the capture cable
