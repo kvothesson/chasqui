@@ -4,7 +4,6 @@ Uses standard Chat Completions (not Realtime) for simplicity.
 Best for: testing, silent mode, piping (echo "hola" | chasqui translate).
 """
 
-import sys
 
 from openai import OpenAI
 

@@ -22,7 +22,9 @@ Setup:
 import threading
 from typing import Optional
 
-from ..core.audio import MicStream, LoopbackStream, SpeakerStream, resolve_device
+from ..core.audio import (
+    MicStream, LoopbackStream, SpeakerStream, find_device_by_hints, resolve_device,
+)
 from .base import BaseAdapter, _safe_print
 
 _CABLE_INPUT_HINTS = ["CABLE Input (VB-Audio Virtual"]  # playback device → chasqui sends translated audio here
@@ -115,7 +117,10 @@ class BridgeAdapter(BaseAdapter):
             loopback_in.start()
             earphone_out.start()
 
-        stop_event = threading.Event()
+        # The adapter-level event, not a fresh one: an external stop() has to
+        # break this wait too, or the GUI's Stop button would leave both
+        # pipelines dead and the loop still spinning.
+        stop_event = self._stop
 
         def _run_direction(label: str, pipeline, in_stream, out_stream):
             _safe_print(f"  [{label}] Connecting to API...")
@@ -158,19 +163,4 @@ class BridgeAdapter(BaseAdapter):
     @staticmethod
     def _find_device(hints: list[str], override: Optional[str], require_output: bool = False) -> Optional[str]:
         """Find a device by name hints. require_output=True filters for playback devices."""
-        if override:
-            return override
-        try:
-            import sounddevice as sd
-            for device in sd.query_devices():
-                name: str = device["name"]
-                if not any(h.lower() in name.lower() for h in hints):
-                    continue
-                if require_output and device["max_output_channels"] == 0:
-                    continue
-                if not require_output and device["max_input_channels"] == 0:
-                    continue
-                return name
-        except Exception:
-            pass
-        return None
+        return find_device_by_hints(hints, override, require_output)
