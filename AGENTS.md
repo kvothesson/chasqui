@@ -16,8 +16,10 @@ chasqui/
     config.py       ← Config dataclass, loads chasqui.yaml
     session.py      ← Turn log + session export
     constants.py    ← LANG_NAMES, API endpoint URLs
+    selftest.py     ← run_check(): TTS → pipeline round trip, no audio hardware
     windevice.py    ← Windows default audio output switcher (PowerShell AudioDeviceCmdlets)
   adapters/
+    __init__.py     ← adapter registry (ADAPTER_PATHS, build_adapter) — lazy imports
     base.py         ← BaseAdapter (all adapters inherit from this)
     text.py         ← Text-only demo adapter
     device.py       ← Single physical mic/speaker
@@ -26,12 +28,36 @@ chasqui/
     bridge.py       ← Two-device LAN pair mode
     meet.py         ← Thin subclass of BridgeAdapter with Meet-specific instructions
     headset.py      ← Bidirectional via Stereo Mix / Hi-Fi Cable; auto-switches Windows default mic
-  cli.py            ← Click CLI: listen, translate, devices, langs, init
+  ui/
+    runner.py       ← Session control for the GUI: worker thread + event queue (no tkinter)
+    app.py          ← The Tk window
+  cli.py            ← Click CLI: listen, ui, translate, check, devices, langs, init
 ```
 
 **To add a new adapter**: subclass `BaseAdapter`, implement `run()`, call
-`self._make_pipeline()` to get a configured `Pipeline`, then register the name in
-`cli.py > _run_adapter > adapter_map`.
+`self._make_pipeline()` to get a configured `Pipeline`, then add the name to
+`adapters/__init__.py > ADAPTER_PATHS` (plus `ADAPTER_LABELS` /
+`UI_ADAPTER_NAMES` if it belongs in the GUI). The CLI's `--adapter` choices and
+the UI's mode list both read from there.
+
+---
+
+## UI
+
+`chasqui ui` opens a Tkinter window. Two rules keep it from fighting the audio
+stack:
+
+- **`ui/runner.py` never imports tkinter.** It owns the worker thread, captures
+  stdout while a session runs and pushes `LogLine` / `TurnLine` / `StateChange`
+  events onto a queue; `ui/app.py` drains that queue from Tk's main thread every
+  100ms. Widgets are only ever touched from the main thread.
+- **Stopping goes through `BaseAdapter.stop()`**, the same unwind path as
+  Ctrl+C — pipelines stop, `run()` returns, and each adapter's `finally`
+  restores the Windows default devices. Closing the window blocks (up to 15s)
+  waiting for that, on purpose.
+
+Transcripts reach the UI through `BaseAdapter.on_turn(event, direction)`, not by
+parsing the printed log.
 
 ---
 
@@ -150,6 +176,14 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   'session.modalities'"): voice/formats/turn_detection now live under
   `output_modalities` + `audio.input`/`audio.output` (see
   `Pipeline._build_realtime_session`).
+- **The UI redirects `sys.stdout` process-wide** while a session runs (adapters
+  only communicate by printing). It is restored in a `finally`; if you add an
+  early return there, every later print in the process disappears into a dead
+  queue. It tees to the previous stdout, not `sys.__stdout__` — the raw one
+  still dies on Japanese.
+- **`chasqui` is taken on PyPI** by an unrelated project, so this package is not
+  installable by that name. Pick a distribution name before the first release;
+  the import package and the `chasqui` console script can stay as they are.
 - **AudioDeviceCmdlets params are `-Recording` / `-Playback`** (they return the
   *default* device of that type). `-RecordingDefault` does not exist — it fails with
   AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a

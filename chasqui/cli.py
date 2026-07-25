@@ -12,14 +12,14 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 
 import click
 
-from .core.config import Config, find_config
+from .adapters import ADAPTER_NAMES, build_adapter
+from .core.config import Config, load_config
 from .core.constants import LANG_NAMES
 
 
 def _load_config(config_path: Optional[str], **overrides) -> Config:
     """Load config from file (auto-detected or explicit), apply CLI overrides."""
-    path = Path(config_path) if config_path else find_config()
-    cfg = Config.from_yaml(path) if path else Config()
+    cfg = load_config(config_path)
 
     for key, val in overrides.items():
         if val is not None:
@@ -29,27 +29,12 @@ def _load_config(config_path: Optional[str], **overrides) -> Config:
 
 
 def _run_adapter(cfg: Config) -> None:
-    adapter_map = {
-        "text":        "chasqui.adapters.text.TextAdapter",
-        "device":      "chasqui.adapters.device.DeviceAdapter",
-        "virtual-mic": "chasqui.adapters.virtual_mic.VirtualMicAdapter",
-        "media":       "chasqui.adapters.media.MediaAdapter",
-        "bridge":      "chasqui.adapters.bridge.BridgeAdapter",
-        "meet":        "chasqui.adapters.meet.MeetAdapter",
-        "headset":     "chasqui.adapters.headset.HeadsetAdapter",
-    }
-
-    module_path = adapter_map.get(cfg.adapter)
-    if not module_path:
-        click.echo(f"Unknown adapter: {cfg.adapter!r}", err=True)
-        click.echo(f"Available: {', '.join(adapter_map)}", err=True)
+    try:
+        adapter = build_adapter(cfg)
+    except KeyError as e:
+        click.echo(f"Error: {e.args[0]}", err=True)
         sys.exit(1)
-
-    mod_name, cls_name = module_path.rsplit(".", 1)
-    import importlib
-    module = importlib.import_module(mod_name)
-    adapter_class = getattr(module, cls_name)
-    adapter_class(cfg).run()
+    adapter.run()
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +67,7 @@ def cli():
 @click.option("--to", "target_lang", default=None, metavar="LANG",
               help="Target language code")
 @click.option("--adapter", default=None,
-              type=click.Choice(["text", "device", "virtual-mic", "media", "bridge", "meet", "headset"]),
+              type=click.Choice(ADAPTER_NAMES),
               help="Input/output adapter (default: from config, else text)")
 @click.option("--voice", default=None,
               type=click.Choice(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]),
@@ -185,9 +170,7 @@ def check(source_lang, target_lang, config_path):
     and prints PASS/FAIL with the translated transcript.
     No audio hardware required.
     """
-    import threading
-    from .core.audio import BytesStream, NullStream
-    from .core.pipeline import Pipeline
+    from .core.selftest import run_check, test_phrase_for
 
     cfg = _load_config(config_path, source_lang=source_lang, target_lang=target_lang)
     try:
@@ -198,87 +181,43 @@ def check(source_lang, target_lang, config_path):
 
     src_name = LANG_NAMES.get(cfg.source_lang, cfg.source_lang)
     tgt_name = LANG_NAMES.get(cfg.target_lang, cfg.target_lang)
-
-    _TEST_PHRASES = {
-        "es": "hola, ¿cómo estás?",
-        "en": "hello, how are you?",
-        "ja": "こんにちは、お元気ですか？",
-        "fr": "bonjour, comment allez-vous?",
-        "pt": "olá, como você está?",
-        "zh": "你好，你好吗？",
-        "de": "hallo, wie geht es dir?",
-        "it": "ciao, come stai?",
-        "ko": "안녕하세요, 잘 지내세요?",
-    }
-    phrase = _TEST_PHRASES.get(cfg.source_lang, f"hello in {src_name}")
+    phrase = test_phrase_for(cfg.source_lang, src_name)
 
     click.echo(f"\nChasqui check — {src_name} → {tgt_name}")
     click.echo(f"  Model:  {cfg.model}")
     click.echo(f"  Phrase: {phrase!r}")
     click.echo()
 
-    # Step 1: synthesize test audio via OpenAI TTS (PCM16 24kHz, same as pipeline)
-    click.echo("  [1/3] Synthesizing test audio... ", nl=False)
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=cfg.api_key)
-        response = client.audio.speech.create(
-            model="tts-1",
-            voice="alloy",
-            input=phrase,
-            response_format="pcm",
-        )
-        pcm_data = response.content
-        click.echo(f"ok  ({len(pcm_data) // 48} ms)")
-    except Exception as e:
-        click.echo(f"FAIL\n\n  Error: {e}", err=True)
-        sys.exit(1)
+    result = run_check(cfg, phrase=phrase, on_progress=lambda msg: click.echo(f"  {msg}"))
 
-    # Step 2: run through pipeline, collect first translation event
-    click.echo("  [2/3] Running pipeline... ", nl=False)
-
-    result: dict = {}
-    got_translation = threading.Event()
-
-    def _on_translation(event):
-        if event.target_text and not got_translation.is_set():
-            result["event"] = event
-            got_translation.set()
-
-    pipeline = Pipeline(
-        source_lang=cfg.source_lang,
-        target_lang=cfg.target_lang,
-        api_key=cfg.api_key,
-        model=cfg.model,
-        on_translation=_on_translation,
-    )
-
-    t = threading.Thread(
-        target=pipeline.run,
-        args=(BytesStream(pcm_data), NullStream()),
-        daemon=True,
-    )
-    t.start()
-
-    if got_translation.wait(timeout=30):
-        pipeline.stop()
-        t.join(timeout=5)
-        ev = result["event"]
-        click.echo(f"ok  ({ev.latency_ms:.0f} ms)")
+    if not result.ok:
         click.echo()
-        click.echo("  [3/3] Result:")
-        click.echo(f"    {cfg.source_lang.upper()}: {ev.source_text}")
-        click.echo(f"    {cfg.target_lang.upper()}: {ev.target_text}")
-        click.echo()
-        click.echo("  PASS")
-    else:
-        pipeline.stop()
-        t.join(timeout=5)
-        click.echo("timeout")
-        click.echo()
-        click.echo("  FAIL: no translation received within 30s")
+        click.echo(f"  FAIL: {result.error}", err=True)
         click.echo("  Tip:  CHASQUI_DEBUG=1 chasqui check", err=True)
         sys.exit(1)
+
+    click.echo()
+    click.echo("  Result:")
+    click.echo(f"    {cfg.source_lang.upper()}: {result.source_text}")
+    click.echo(f"    {cfg.target_lang.upper()}: {result.target_text}")
+    click.echo(f"    {result.latency_ms:.0f} ms")
+    click.echo()
+    click.echo("  PASS")
+
+
+@cli.command()
+@click.option("--config", "config_path", default=None,
+              help="Path to chasqui.yaml")
+def ui(config_path):
+    """Open the desktop interface.
+
+    \b
+    Start/stop a session, pick languages and mode, run the smoke test and
+    watch the transcript live. Audio devices stay on Auto unless you open
+    the devices panel and choose them.
+    """
+    from .ui.app import launch
+    sys.exit(launch(config_path=config_path))
 
 
 @cli.command()

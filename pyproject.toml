@@ -1,20 +1,26 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "chasqui"
-version = "0.1.0"
+# Single source of truth is chasqui/__init__.py — see [tool.setuptools.dynamic].
+dynamic = ["version"]
 description = "Real-time simultaneous translation. Speak your language. Be understood."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "kvothesson"}]
 keywords = ["translation", "real-time", "speech", "ai", "interpreter", "realtime-api"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    # Windows-first and honest about it: the headset/media adapters switch
+    # Windows default devices through PowerShell, and the virtual-cable setup
+    # they depend on is Windows-only. The text adapter runs anywhere.
+    "Environment :: Win32 (MS Windows)",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -39,6 +45,9 @@ chasqui = "chasqui.cli:cli"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "black", "ruff"]
+
+[tool.setuptools.dynamic]
+version = {attr = "chasqui.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["chasqui*"]

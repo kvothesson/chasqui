@@ -7,11 +7,32 @@ Real-time simultaneous translation. Speak your language. Be understood.
 
 ## Quick start
 
+Not on PyPI yet (the name `chasqui` there belongs to an unrelated project), so
+install from source:
+
 ```bash
-pip install chasqui
+git clone https://github.com/kvothesson/chasqui && cd chasqui
+pip install -e .
 export OPENAI_API_KEY=sk-...
-chasqui listen --from es --to ja
+chasqui ui           # desktop interface
+chasqui listen --from es --to ja    # or straight to the CLI
 ```
+
+## Interface
+
+`chasqui ui` opens a window: pick the two languages and a mode, press Start,
+and watch the conversation land in the transcript as it happens. Check runs the
+same smoke test as `chasqui check` — no mic, no speakers, just "is the pipeline
+alive". Audio devices stay on **Auto**; open the devices panel only if
+autodetection picks the wrong cable.
+
+Stopping matters more than it looks: the headset and media modes take over your
+Windows default mic and output while they run and hand them back on exit, so use
+Stop (or just close the window — it waits for the handover) instead of killing
+the process.
+
+Tkinter ships with Python, so the UI adds no dependency. On Debian/Ubuntu it
+lives in a separate package: `sudo apt install python3-tk`.
 
 ## Adapters
 
@@ -27,6 +48,7 @@ chasqui listen --from es --to ja
 ## Commands
 
 ```bash
+chasqui ui                                     # desktop interface
 chasqui translate "¿Dónde está la estación?"   # one-shot text translation
 chasqui listen --adapter device                # live audio translation
 chasqui listen --adapter headset --mic "USB Micro" --earphone "Auriculares"

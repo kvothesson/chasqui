@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 
-from .constants import SAMPLE_RATE, CHANNELS, SAMPLE_WIDTH, CHUNK_FRAMES, CHUNK_SIZE
+from .constants import SAMPLE_RATE, CHANNELS, SAMPLE_WIDTH, CHUNK_SIZE
 
 
 def refresh_devices() -> None:
@@ -60,6 +60,34 @@ def resolve_device(name: Optional[str | int], want_input: bool = True) -> Option
     except Exception:
         pass
     return name
+
+
+def find_device_by_hints(
+    hints: list[str],
+    override: Optional[str] = None,
+    require_output: bool = False,
+) -> Optional[str]:
+    """First device whose name contains one of `hints`, or `override` as-is.
+
+    Returns a NAME, not an index: callers usually switch a Windows default
+    device afterwards, which renumbers indices (see `refresh_devices`). Resolve
+    to an index only once the switching is done.
+    """
+    if override:
+        return override
+    try:
+        import sounddevice as sd
+        for device in sd.query_devices():
+            name: str = device["name"]
+            if not any(h.lower() in name.lower() for h in hints):
+                continue
+            channels = "max_output_channels" if require_output else "max_input_channels"
+            if device[channels] == 0:
+                continue
+            return name
+    except Exception:
+        pass
+    return None
 
 
 class AudioStream(abc.ABC):
