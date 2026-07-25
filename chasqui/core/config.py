@@ -131,6 +131,12 @@ def _resolve_env(value: str) -> str:
     return value
 
 
+def load_config(path: Optional[str | Path] = None) -> Config:
+    """Load config from an explicit path, the auto-detected one, or defaults."""
+    resolved = Path(path) if path else find_config()
+    return Config.from_yaml(resolved) if resolved else Config()
+
+
 def find_config() -> Optional[Path]:
     """Search for chasqui.yaml in cwd then home."""
     candidates = [

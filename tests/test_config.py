@@ -1,6 +1,5 @@
 """Config loading and override behavior."""
 
-import os
 
 import pytest
 
