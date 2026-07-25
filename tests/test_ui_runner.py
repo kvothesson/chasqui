@@ -238,19 +238,75 @@ def test_every_mode_says_what_its_language_boxes_mean():
     )
 
 
-def test_media_does_not_ask_who_speaks():
-    """Nobody speaks in media mode: the machine plays, the user listens."""
+def test_the_users_language_is_always_the_left_box():
+    """Whatever the mode, the left picker is the user's own language.
+
+    Media is the mode that tempts you to break this: there the audio being
+    translated is the source, so the honest-looking layout puts the user on the
+    right. Do that and switching modes silently reverses what the boxes mean —
+    the user has to swap their two languages by hand to get the same result,
+    and the first time they forget, chasqui translates a Japanese video into
+    Japanese.
+    """
+    from chasqui.adapters import UI_ADAPTER_NAMES
     from chasqui.ui.app import LANG_ROLES
 
-    source_role, target_role = LANG_ROLES["media"]
-    assert "speak" not in source_role.lower(), (
-        "Media mode must not label the source box 'I speak' — the audio is the "
-        "source, not the user. Asking it that way makes people put their own "
-        "language on the left, which translates the video INTO the language "
-        "they were trying to get away from."
+    for mode in UI_ADAPTER_NAMES:
+        left, right = LANG_ROLES[mode]
+        assert left.lower().startswith("i "), (
+            f"Mode {mode!r} captions its LEFT box {left!r}. That box is the "
+            "user's language in every mode — if this one really is the other "
+            "side's, add the mode to LEFT_IS_TARGET so the pair is reversed on "
+            "the way to Config instead of on screen."
+        )
+        assert not right.lower().startswith("i "), (
+            f"Mode {mode!r} captions its RIGHT box {right!r}, claiming both "
+            "boxes are the user's. One of them is the other side."
+        )
+
+
+def test_media_reverses_the_pair_on_the_way_to_config():
+    """Keeping the user on the left means media's pair is flipped underneath."""
+    from chasqui.ui.app import orient
+
+    assert orient("es", "ja", "media") == ("ja", "es"), (
+        "In media the left box is what the USER hears (target_lang) and the "
+        "right is the audio being translated (source_lang). Without the flip, "
+        "chasqui translates the user's own language into the video's."
     )
-    assert "hear" in target_role.lower(), (
-        "The target box in media mode is what the user hears. Say so."
+    assert orient("es", "ja", "headset") == ("es", "ja"), (
+        "Every other mode maps left→source, right→target unchanged."
+    )
+
+
+def test_orient_is_its_own_inverse():
+    """Boxes → config → boxes has to round-trip, or a saved session reloads
+    with the two languages silently swapped."""
+    from chasqui.adapters import UI_ADAPTER_NAMES
+    from chasqui.ui.app import orient
+
+    for mode in UI_ADAPTER_NAMES:
+        assert orient(*orient("es", "ja", mode), mode) == ("es", "ja"), (
+            f"orient() does not round-trip for {mode!r}."
+        )
+
+
+def test_only_bidirectional_modes_get_the_two_way_arrow():
+    """The arrow is the only thing on screen that distinguishes a conversation
+    from a broadcast. Pointing it both ways in a one-way mode promises a return
+    channel that does not exist."""
+    from chasqui.adapters import UI_ADAPTER_NAMES
+    from chasqui.ui.app import BIDIRECTIONAL
+
+    unknown = BIDIRECTIONAL - set(UI_ADAPTER_NAMES)
+    assert not unknown, f"BIDIRECTIONAL names no such mode: {unknown}"
+    assert "headset" in BIDIRECTIONAL, (
+        "headset translates both ways — it is the flagship bidirectional mode."
+    )
+    assert "media" not in BIDIRECTIONAL and "virtual-mic" not in BIDIRECTIONAL, (
+        "media and virtual-mic run a single pipeline. Marking them "
+        "bidirectional tells the user to expect a reply channel that no "
+        "adapter is running."
     )
 
 
