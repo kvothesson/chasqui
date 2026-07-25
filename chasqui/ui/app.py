@@ -179,13 +179,11 @@ class ChasquiApp:
         root = self.root
         root.title("chasqui")
         root.configure(bg=C_BG)
-        root.minsize(620, 560)
-        root.geometry("720x680")
         root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         ui_font = "Segoe UI" if sys.platform == "win32" else "TkDefaultFont"
         mono_font = "Consolas" if sys.platform == "win32" else "TkFixedFont"
-        self.mono = (mono_font, 10)
+        self.mono = (mono_font, 9)
 
         style = ttk.Style(root)
         try:
@@ -193,21 +191,22 @@ class ChasquiApp:
         except Exception:
             pass
 
-        style.configure(".", background=C_BG, foreground=C_TEXT, font=(ui_font, 10))
+        style.configure(".", background=C_BG, foreground=C_TEXT, font=(ui_font, 9))
         style.configure("TFrame", background=C_BG)
         style.configure("Panel.TFrame", background=C_PANEL)
         style.configure("TLabel", background=C_BG, foreground=C_TEXT)
         style.configure("Panel.TLabel", background=C_PANEL, foreground=C_TEXT)
-        style.configure("Muted.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 9))
-        style.configure("PanelMuted.TLabel", background=C_PANEL, foreground=C_MUTED, font=(ui_font, 9))
-        style.configure("Title.TLabel", background=C_BG, foreground=C_TEXT, font=(ui_font, 17, "bold"))
-        style.configure("Role.TLabel", background=C_PANEL, foreground=C_ACCENT, font=(ui_font, 9, "bold"))
-        style.configure("Status.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 10))
+        style.configure("Muted.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 8))
+        style.configure("PanelMuted.TLabel", background=C_PANEL, foreground=C_MUTED, font=(ui_font, 8))
+        style.configure("Title.TLabel", background=C_BG, foreground=C_TEXT, font=(ui_font, 12, "bold"))
+        style.configure("Role.TLabel", background=C_PANEL, foreground=C_ACCENT, font=(ui_font, 8, "bold"))
+        style.configure("Status.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 9))
+        style.configure("Cost.TLabel", background=C_BG, foreground=C_TEXT, font=(ui_font, 9))
 
         style.configure(
             "TCombobox", fieldbackground=C_PANEL, background=C_PANEL, foreground=C_TEXT,
             arrowcolor=C_MUTED, bordercolor=C_BORDER, lightcolor=C_PANEL, darkcolor=C_PANEL,
-            selectbackground=C_PANEL, selectforeground=C_TEXT, padding=5,
+            selectbackground=C_PANEL, selectforeground=C_TEXT, padding=3,
         )
         style.map(
             "TCombobox",
@@ -231,7 +230,7 @@ class ChasquiApp:
             style.configure(
                 name, background=bg, foreground=fg, bordercolor=C_BORDER,
                 lightcolor=bg, darkcolor=bg, focuscolor=bg,
-                font=(ui_font, 10, "bold"), padding=(16, 9), relief="flat",
+                font=(ui_font, 9, "bold"), padding=(10, 7), relief="flat",
             )
             style.map(
                 name,
@@ -249,6 +248,28 @@ class ChasquiApp:
             background=[("active", C_BORDER), ("disabled", C_PANEL)],
             foreground=[("disabled", C_MUTED)],
         )
+        style.configure(
+            "Pin.TButton", background=C_BG, foreground=C_ACCENT, bordercolor=C_BG,
+            lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
+            padding=(4, 4), font=(ui_font, 9), relief="flat",
+        )
+        style.map("Pin.TButton", background=[("active", C_PANEL)])
+        style.configure(
+            "Unpin.TButton", background=C_BG, foreground=C_DISABLED, bordercolor=C_BG,
+            lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
+            padding=(4, 4), font=(ui_font, 9), relief="flat",
+        )
+        style.map("Unpin.TButton", background=[("active", C_PANEL)])
+        style.configure(
+            "Link.TButton", background=C_BG, foreground=C_MUTED, bordercolor=C_BG,
+            lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
+            padding=(0, 2), font=(ui_font, 8), relief="flat",
+        )
+        style.map(
+            "Link.TButton",
+            background=[("active", C_BG)], foreground=[("active", C_TEXT)],
+        )
+
         style.configure(
             "TScrollbar", background=C_PANEL, troughcolor=C_BG, bordercolor=C_BORDER,
             arrowcolor=C_MUTED, lightcolor=C_PANEL, darkcolor=C_PANEL,
@@ -268,9 +289,10 @@ class ChasquiApp:
             indicatorbackground=[("selected", C_PANEL), ("active", C_PANEL)],
         )
 
-        outer = ttk.Frame(root, padding=(18, 16, 18, 14))
+        outer = ttk.Frame(root, padding=(12, 10, 12, 10))
         outer.pack(fill="both", expand=True)
         outer.columnconfigure(0, weight=1)
+        self.outer = outer
 
         # --- header -------------------------------------------------
         header = ttk.Frame(outer)
@@ -278,23 +300,27 @@ class ChasquiApp:
         header.columnconfigure(1, weight=1)
 
         ttk.Label(header, text="chasqui", style="Title.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            header, text="Speak your language. Be understood.", style="Muted.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(1, 0))
 
         status = ttk.Frame(header)
-        status.grid(row=0, column=2, rowspan=2, sticky="e")
+        status.grid(row=0, column=2, sticky="e")
         self.status_dot = self.tk.Canvas(
-            status, width=10, height=10, bg=C_BG, highlightthickness=0,
+            status, width=9, height=9, bg=C_BG, highlightthickness=0,
         )
-        self.status_dot.grid(row=0, column=0, padx=(0, 7))
-        self._dot = self.status_dot.create_oval(1, 1, 9, 9, fill=C_MUTED, outline="")
+        self.status_dot.grid(row=0, column=0, padx=(0, 6))
+        self._dot = self.status_dot.create_oval(1, 1, 8, 8, fill=C_MUTED, outline="")
         self.status_label = ttk.Label(status, text="Idle", style="Status.TLabel")
         self.status_label.grid(row=0, column=1)
 
+        # Floating over a call is the point of a gadget this size — without
+        # this it disappears behind Meet the moment you click the meeting.
+        self.var_pin = self.tk.BooleanVar(value=True)
+        self.btn_pin = ttk.Button(
+            status, text="📌", width=3, style="Pin.TButton", command=self._toggle_pin)
+        self.btn_pin.grid(row=0, column=2, padx=(6, 0))
+
         # --- settings -----------------------------------------------
-        settings = ttk.Frame(outer, style="Panel.TFrame", padding=14)
-        settings.grid(row=1, column=0, sticky="ew", pady=(16, 0))
+        settings = ttk.Frame(outer, style="Panel.TFrame", padding=10)
+        settings.grid(row=1, column=0, sticky="ew", pady=(10, 0))
         settings.columnconfigure(1, weight=1)
         settings.columnconfigure(3, weight=1)
 
@@ -306,105 +332,109 @@ class ChasquiApp:
         self.var_left = self.tk.StringVar(value=_lang_label(left))
         self.var_right = self.tk.StringVar(value=_lang_label(right))
 
+        settings.columnconfigure(2, weight=1)
+
         # Captions sit ABOVE the pickers and change with the mode: which box is
         # "yours" is the one thing a user must not have to guess.
         self.lbl_source_role = ttk.Label(settings, text="", style="Role.TLabel")
-        self.lbl_source_role.grid(row=0, column=1, sticky="w", pady=(0, 3))
+        self.lbl_source_role.grid(row=0, column=0, sticky="w", pady=(0, 2))
         self.lbl_target_role = ttk.Label(settings, text="", style="Role.TLabel")
-        self.lbl_target_role.grid(row=0, column=3, sticky="w", pady=(0, 3))
+        self.lbl_target_role.grid(row=0, column=2, sticky="w", pady=(0, 2))
 
-        ttk.Label(settings, text="Languages", style="PanelMuted.TLabel").grid(
-            row=1, column=0, sticky="w", padx=(0, 10))
         self.cmb_left = ttk.Combobox(
-            settings, textvariable=self.var_left, values=langs, state="readonly", width=18)
-        self.cmb_left.grid(row=1, column=1, sticky="ew")
+            settings, textvariable=self.var_left, values=langs, state="readonly", width=12)
+        self.cmb_left.grid(row=1, column=0, sticky="ew")
 
         self.btn_swap = ttk.Button(
             settings, text="⇄", width=3, style="Swap.TButton", command=self._swap_langs)
-        self.btn_swap.grid(row=1, column=2, padx=10)
+        self.btn_swap.grid(row=1, column=1, padx=6)
 
         self.cmb_right = ttk.Combobox(
-            settings, textvariable=self.var_right, values=langs, state="readonly", width=18)
-        self.cmb_right.grid(row=1, column=3, sticky="ew")
+            settings, textvariable=self.var_right, values=langs, state="readonly", width=12)
+        self.cmb_right.grid(row=1, column=2, sticky="ew")
 
-        ttk.Label(settings, text="Mode", style="PanelMuted.TLabel").grid(
-            row=2, column=0, sticky="w", pady=(12, 0))
         self.var_adapter = self.tk.StringVar()
         self.cmb_adapter = ttk.Combobox(
             settings, textvariable=self.var_adapter, state="readonly",
             values=[ADAPTER_LABELS[name] for name in UI_ADAPTER_NAMES])
-        self.cmb_adapter.grid(row=2, column=1, columnspan=3, sticky="ew", pady=(12, 0))
+        self.cmb_adapter.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
         self.cmb_adapter.bind("<<ComboboxSelected>>", lambda _e: self._on_adapter_change())
         self.var_adapter.set(ADAPTER_LABELS[initial_adapter])
 
-        ttk.Label(settings, text="Voice", style="PanelMuted.TLabel").grid(
-            row=3, column=0, sticky="w", pady=(12, 0))
+        # --- secondary settings (hidden until Details) -----------------
+        self.extras = ttk.Frame(outer, style="Panel.TFrame", padding=10)
+        self.extras.columnconfigure(1, weight=1)
+
+        ttk.Label(self.extras, text="Voice", style="PanelMuted.TLabel").grid(
+            row=0, column=0, sticky="w", padx=(0, 8))
         self.var_voice = self.tk.StringVar(value=self.base_config.voice)
         self.cmb_voice = ttk.Combobox(
-            settings, textvariable=self.var_voice, values=VOICES, state="readonly", width=18)
-        self.cmb_voice.grid(row=3, column=1, sticky="ew", pady=(12, 0))
+            self.extras, textvariable=self.var_voice, values=VOICES,
+            state="readonly", width=10)
+        self.cmb_voice.grid(row=0, column=1, sticky="w")
 
         self.var_show_devices = self.tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            settings, text="Audio devices", variable=self.var_show_devices,
+            self.extras, text="Audio devices", variable=self.var_show_devices,
             command=self._toggle_devices, style="Panel.TCheckbutton",
-        ).grid(row=3, column=3, sticky="e", pady=(12, 0), padx=(0, 2))
+        ).grid(row=0, column=2, sticky="e", padx=(8, 2))
 
         # --- devices (collapsed) -------------------------------------
-        self.devices_frame = ttk.Frame(outer, style="Panel.TFrame", padding=14)
+        self.devices_frame = ttk.Frame(outer, style="Panel.TFrame", padding=10)
         self.devices_frame.columnconfigure(1, weight=1)
         self.device_vars: dict[str, "object"] = {}
         self.device_widgets: dict[str, object] = {}
 
         for row, (key, label, hint, kind) in enumerate(DEVICE_FIELDS):
             ttk.Label(self.devices_frame, text=label, style="PanelMuted.TLabel").grid(
-                row=row, column=0, sticky="w", pady=4, padx=(0, 10))
+                row=row, column=0, sticky="w", pady=3, padx=(0, 8))
             var = self.tk.StringVar(value=AUTO)
             combo = ttk.Combobox(
                 self.devices_frame, textvariable=var, values=[AUTO], state="readonly")
-            combo.grid(row=row, column=1, sticky="ew", pady=4)
-            ttk.Label(self.devices_frame, text=hint, style="PanelMuted.TLabel").grid(
-                row=row, column=2, sticky="w", padx=(12, 0))
+            combo.grid(row=row, column=1, sticky="ew", pady=3)
             self.device_vars[key] = var
             self.device_widgets[key] = combo
+            # Hints live in the tooltip-free way that fits a gadget: the label
+            # says what it is, the mode already greys out what it isn't.
 
         ttk.Button(
             self.devices_frame, text="Refresh", style="Inset.TButton",
             command=lambda: self._load_device_lists(force=True),
-        ).grid(row=len(DEVICE_FIELDS), column=1, sticky="w", pady=(10, 0))
-        ttk.Label(
-            self.devices_frame,
-            text="Auto works for most setups — chasqui finds the cables itself.",
-            style="PanelMuted.TLabel",
-        ).grid(row=len(DEVICE_FIELDS), column=2, sticky="w", padx=(12, 0), pady=(10, 0))
+        ).grid(row=len(DEVICE_FIELDS), column=1, sticky="w", pady=(8, 0))
 
         # --- actions --------------------------------------------------
         actions = ttk.Frame(outer)
-        actions.grid(row=3, column=0, sticky="ew", pady=(16, 0))
+        actions.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        actions.columnconfigure(0, weight=1)
 
         self.btn_start = ttk.Button(
             actions, text="Start", style="Accent.TButton", command=self._on_start_stop)
-        self.btn_start.grid(row=0, column=0)
+        self.btn_start.grid(row=0, column=0, sticky="ew")
 
         self.btn_check = ttk.Button(
             actions, text="Check", style="Ghost.TButton", command=self._on_check)
-        self.btn_check.grid(row=0, column=1, padx=(10, 0))
+        self.btn_check.grid(row=0, column=1, padx=(6, 0))
 
-        self.btn_clear = ttk.Button(
-            actions, text="Clear log", style="Ghost.TButton", command=self._clear_log)
-        self.btn_clear.grid(row=0, column=2, padx=(10, 0))
+        # --- cost line (always visible — the reason to keep it in sight)
+        self.footer = ttk.Label(outer, text="", style="Cost.TLabel")
+        self.footer.grid(row=4, column=0, sticky="w", pady=(8, 0))
 
-        # --- log ------------------------------------------------------
-        log_wrap = self.tk.Frame(outer, bg=C_BORDER, bd=0, highlightthickness=0)
-        log_wrap.grid(row=4, column=0, sticky="nsew", pady=(16, 0))
-        outer.rowconfigure(4, weight=1)
+        self.var_details = self.tk.BooleanVar(value=False)
+        self.btn_details = ttk.Button(
+            outer, text="▸ Details", style="Link.TButton", command=self._toggle_details)
+        self.btn_details.grid(row=5, column=0, sticky="w", pady=(2, 0))
+
+        # --- log (built always, shown only in Details) ------------------
+        # Built up front so lines accumulate while hidden and are all there
+        # the moment the user opens it to find out what went wrong.
+        self.log_wrap = self.tk.Frame(outer, bg=C_BORDER, bd=0, highlightthickness=0)
 
         self.log = self.tk.Text(
-            log_wrap, bg=C_PANEL, fg=C_TEXT, insertbackground=C_TEXT, font=self.mono,
-            wrap="word", relief="flat", padx=12, pady=10, height=12, state="disabled",
-            selectbackground=C_ACCENT,
+            self.log_wrap, bg=C_PANEL, fg=C_TEXT, insertbackground=C_TEXT, font=self.mono,
+            wrap="word", relief="flat", padx=8, pady=8, height=10, width=1,
+            state="disabled", selectbackground=C_ACCENT,
         )
-        scroll = ttk.Scrollbar(log_wrap, command=self.log.yview)
+        scroll = ttk.Scrollbar(self.log_wrap, command=self.log.yview)
         self.log.configure(yscrollcommand=scroll.set)
         self.log.pack(side="left", fill="both", expand=True, padx=1, pady=1)
         scroll.pack(side="right", fill="y")
@@ -412,14 +442,16 @@ class ChasquiApp:
         for level, color in LEVEL_COLORS.items():
             self.log.tag_configure(level, foreground=color)
         self.log.tag_configure("src", foreground=C_MUTED)
-        self.log.tag_configure("out", foreground=C_TEXT, font=(mono_font, 11, "bold"))
-        self.log.tag_configure("in", foreground=C_IN, font=(mono_font, 11, "bold"))
-        self.log.tag_configure("meta", foreground=C_MUTED, font=(mono_font, 8))
+        self.log.tag_configure("out", foreground=C_TEXT, font=(mono_font, 10, "bold"))
+        self.log.tag_configure("in", foreground=C_IN, font=(mono_font, 10, "bold"))
+        self.log.tag_configure("meta", foreground=C_MUTED, font=(mono_font, 7))
 
-        # --- footer ---------------------------------------------------
-        self.footer = ttk.Label(outer, text="", style="Muted.TLabel")
-        self.footer.grid(row=5, column=0, sticky="w", pady=(10, 0))
+        self.btn_clear = ttk.Button(
+            outer, text="Clear log", style="Ghost.TButton", command=self._clear_log)
+
+        self.footer_meta = ttk.Label(outer, text="", style="Muted.TLabel")
         self._update_footer()
+        self._apply_size()
 
         source = self.config_path or find_config()
         self._log(f"Config: {source or 'built-in defaults (no chasqui.yaml found)'}", INFO)
@@ -459,6 +491,10 @@ class ChasquiApp:
         spend = data.get("spend") or {}
         self._spent_baseline = float(spend.get("usd") or 0.0)
         self._spend_since = spend.get("since") or ""
+        window = data.get("window") or {}
+        self.var_pin.set(bool(window.get("pinned", True)))
+        self.var_details.set(bool(window.get("details", False)))
+        self._apply_size()
 
     def _save_settings(self) -> None:
         source, target = self._lang_pair()
@@ -473,6 +509,10 @@ class ChasquiApp:
             "spend": {
                 "since": self._spend_since or time.strftime("%Y-%m-%d"),
                 "usd": round(self._spent_usd(), 6),
+            },
+            "window": {
+                "pinned": bool(self.var_pin.get()),
+                "details": bool(self.var_details.get()),
             },
         }
         try:
@@ -536,9 +576,49 @@ class ChasquiApp:
         for key, widget in self.device_widgets.items():
             widget.configure(state="readonly" if key in active else "disabled")
 
+    def _toggle_pin(self) -> None:
+        pinned = not self.var_pin.get()
+        self.var_pin.set(pinned)
+        self.root.attributes("-topmost", pinned)
+        self.btn_pin.configure(style="Pin.TButton" if pinned else "Unpin.TButton")
+
+    def _toggle_details(self) -> None:
+        self.var_details.set(not self.var_details.get())
+        self._apply_size()
+
+    def _apply_size(self) -> None:
+        """Two shapes: a gadget you park next to a call, and the full panel.
+
+        Collapsed is the default because during a call the only things worth
+        screen space are the state, the languages and what it is costing.
+        """
+        details = self.var_details.get()
+        self.root.attributes("-topmost", self.var_pin.get())
+        self.btn_pin.configure(
+            style="Pin.TButton" if self.var_pin.get() else "Unpin.TButton")
+
+        if details:
+            self.extras.grid(row=6, column=0, sticky="ew", pady=(8, 0))
+            self._toggle_devices()
+            self.log_wrap.grid(row=8, column=0, sticky="nsew", pady=(8, 0))
+            self.btn_clear.grid(row=9, column=0, sticky="w", pady=(6, 0))
+            self.footer_meta.grid(row=10, column=0, sticky="w", pady=(6, 0))
+            self.outer.rowconfigure(8, weight=1)
+            self.btn_details.configure(text="▾ Details")
+            self.root.minsize(340, 520)
+            self.root.geometry("400x620")
+        else:
+            for widget in (self.extras, self.devices_frame, self.log_wrap,
+                           self.btn_clear, self.footer_meta):
+                widget.grid_remove()
+            self.outer.rowconfigure(8, weight=0)
+            self.btn_details.configure(text="▸ Details")
+            self.root.minsize(340, 260)
+            self.root.geometry("400x272")
+
     def _toggle_devices(self) -> None:
-        if self.var_show_devices.get():
-            self.devices_frame.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        if self.var_show_devices.get() and self.var_details.get():
+            self.devices_frame.grid(row=7, column=0, sticky="ew", pady=(8, 0))
             self._load_device_lists()
         else:
             self.devices_frame.grid_remove()
@@ -777,15 +857,11 @@ class ChasquiApp:
         return "   ·   ".join(parts)
 
     def _update_footer(self) -> None:
+        # The cost line stays visible in gadget mode; the rest is detail.
+        self.footer.configure(text=self._cost_text() or "No session yet")
         average = self.latency_total / self.turns if self.turns else 0.0
-        parts = [
-            self.base_config.model,
-            f"{self.turns} turns",
-            f"avg {average:.0f}ms",
-        ]
-        if cost := self._cost_text():
-            parts.append(cost)
-        self.footer.configure(text="   ·   ".join(parts))
+        self.footer_meta.configure(
+            text=f"{self.base_config.model}   ·   {self.turns} turns   ·   avg {average:.0f}ms")
 
     # ------------------------------------------------------------------
 
