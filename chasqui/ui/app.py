@@ -36,15 +36,32 @@ ADAPTER_DEVICES: dict[str, set[str]] = {
 # in media mode — there the machine talks and you listen, so asking it that way
 # gets the pair set backwards and the translation comes out in the language you
 # already understand.
+#
+# Two verbs, two owners, everywhere: every caption answers "whose language is
+# this box?" with the same four words, and the user's language is ALWAYS the
+# left one. Keeping it there is the point — otherwise switching to media would
+# silently reverse what the boxes mean and the user would have to swap their
+# two languages by hand to get the same result.
 LANG_ROLES: dict[str, tuple[str, str]] = {
     "headset":     ("I speak", "They speak"),
     "meet":        ("I speak", "They speak"),
     "bridge":      ("I speak", "They speak"),
     "virtual-mic": ("I speak", "They hear"),
     "device":      ("I speak", "They hear"),
-    "media":       ("Audio is in", "I hear"),
+    "media":       ("I hear", "They speak"),
 }
 DEFAULT_ROLES = ("I speak", "They hear")
+
+# Modes where the left picker holds target_lang instead of source_lang. In
+# media the audio being translated is the source, so pinning the user to the
+# left means the pair is reversed on the way to Config — never on screen.
+LEFT_IS_TARGET = {"media"}
+
+# Modes that translate both ways. The arrow between the pickers carries this:
+# ⇄ when both directions are live, otherwise it points the way the translation
+# actually travels — the only visual difference between "we can talk" and
+# "you are being broadcast".
+BIDIRECTIONAL = {"headset", "meet", "bridge"}
 
 DEVICE_FIELDS = [
     ("mic",      "Microphone",   "Your voice goes in here",          "input"),
@@ -91,6 +108,15 @@ def _lang_label(code: str) -> str:
 
 def _lang_code(label: str) -> str:
     return label.rsplit("(", 1)[-1].rstrip(")") if "(" in label else label
+
+
+def orient(first: str, second: str, adapter: str) -> tuple[str, str]:
+    """Map between (left box, right box) and (source_lang, target_lang).
+
+    Its own inverse — the mapping is a conditional swap, so the same call
+    converts in both directions and the two can never drift apart.
+    """
+    return (second, first) if adapter in LEFT_IS_TARGET else (first, second)
 
 
 def list_devices(kind: str) -> list[str]:
@@ -267,8 +293,12 @@ class ChasquiApp:
         settings.columnconfigure(3, weight=1)
 
         langs = _lang_choices()
-        self.var_source = self.tk.StringVar(value=_lang_label(self.base_config.source_lang))
-        self.var_target = self.tk.StringVar(value=_lang_label(self.base_config.target_lang))
+        initial_adapter = (self.base_config.adapter
+                           if self.base_config.adapter in UI_ADAPTER_NAMES else "headset")
+        left, right = orient(
+            self.base_config.source_lang, self.base_config.target_lang, initial_adapter)
+        self.var_left = self.tk.StringVar(value=_lang_label(left))
+        self.var_right = self.tk.StringVar(value=_lang_label(right))
 
         # Captions sit ABOVE the pickers and change with the mode: which box is
         # "yours" is the one thing a user must not have to guess.
@@ -279,17 +309,17 @@ class ChasquiApp:
 
         ttk.Label(settings, text="Languages", style="PanelMuted.TLabel").grid(
             row=1, column=0, sticky="w", padx=(0, 10))
-        self.cmb_source = ttk.Combobox(
-            settings, textvariable=self.var_source, values=langs, state="readonly", width=18)
-        self.cmb_source.grid(row=1, column=1, sticky="ew")
+        self.cmb_left = ttk.Combobox(
+            settings, textvariable=self.var_left, values=langs, state="readonly", width=18)
+        self.cmb_left.grid(row=1, column=1, sticky="ew")
 
         self.btn_swap = ttk.Button(
             settings, text="⇄", width=3, style="Swap.TButton", command=self._swap_langs)
         self.btn_swap.grid(row=1, column=2, padx=10)
 
-        self.cmb_target = ttk.Combobox(
-            settings, textvariable=self.var_target, values=langs, state="readonly", width=18)
-        self.cmb_target.grid(row=1, column=3, sticky="ew")
+        self.cmb_right = ttk.Combobox(
+            settings, textvariable=self.var_right, values=langs, state="readonly", width=18)
+        self.cmb_right.grid(row=1, column=3, sticky="ew")
 
         ttk.Label(settings, text="Mode", style="PanelMuted.TLabel").grid(
             row=2, column=0, sticky="w", pady=(12, 0))
@@ -299,9 +329,7 @@ class ChasquiApp:
             values=[ADAPTER_LABELS[name] for name in UI_ADAPTER_NAMES])
         self.cmb_adapter.grid(row=2, column=1, columnspan=3, sticky="ew", pady=(12, 0))
         self.cmb_adapter.bind("<<ComboboxSelected>>", lambda _e: self._on_adapter_change())
-        self.var_adapter.set(ADAPTER_LABELS.get(
-            self.base_config.adapter if self.base_config.adapter in UI_ADAPTER_NAMES else "headset",
-            ADAPTER_LABELS["headset"]))
+        self.var_adapter.set(ADAPTER_LABELS[initial_adapter])
 
         ttk.Label(settings, text="Voice", style="PanelMuted.TLabel").grid(
             row=3, column=0, sticky="w", pady=(12, 0))
@@ -405,12 +433,15 @@ class ChasquiApp:
             data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
         except Exception:
             return
-        if code := data.get("source_lang"):
-            self.var_source.set(_lang_label(code))
-        if code := data.get("target_lang"):
-            self.var_target.set(_lang_label(code))
+        # Mode first: it decides which box each saved language belongs in.
         if (adapter := data.get("adapter")) in ADAPTER_LABELS:
             self.var_adapter.set(ADAPTER_LABELS[adapter])
+        source = data.get("source_lang")
+        target = data.get("target_lang")
+        if source and target:
+            left, right = orient(source, target, self._adapter_name())
+            self.var_left.set(_lang_label(left))
+            self.var_right.set(_lang_label(right))
         if (voice := data.get("voice")) in VOICES:
             self.var_voice.set(voice)
         for key, value in (data.get("devices") or {}).items():
@@ -420,9 +451,10 @@ class ChasquiApp:
                 widget.configure(values=[AUTO, value])
 
     def _save_settings(self) -> None:
+        source, target = self._lang_pair()
         data = {
-            "source_lang": _lang_code(self.var_source.get()),
-            "target_lang": _lang_code(self.var_target.get()),
+            "source_lang": source,
+            "target_lang": target,
             "adapter": self._adapter_name(),
             "voice": self.var_voice.get(),
             "devices": {
@@ -446,11 +478,18 @@ class ChasquiApp:
                 return name
         return "headset"
 
+    def _lang_pair(self) -> tuple[str, str]:
+        """The two pickers as (source_lang, target_lang) for the current mode."""
+        return orient(
+            _lang_code(self.var_left.get()),
+            _lang_code(self.var_right.get()),
+            self._adapter_name(),
+        )
+
     def _build_config(self) -> Config:
         """Fresh config from disk, with the window's selections on top."""
         cfg = load_config(self.config_path)
-        cfg.source_lang = _lang_code(self.var_source.get())
-        cfg.target_lang = _lang_code(self.var_target.get())
+        cfg.source_lang, cfg.target_lang = self._lang_pair()
         cfg.adapter = self._adapter_name()
         cfg.voice = self.var_voice.get()
 
@@ -468,9 +507,16 @@ class ChasquiApp:
     def _on_adapter_change(self) -> None:
         adapter = self._adapter_name()
 
-        source_role, target_role = LANG_ROLES.get(adapter, DEFAULT_ROLES)
-        self.lbl_source_role.configure(text=source_role)
-        self.lbl_target_role.configure(text=target_role)
+        left_role, right_role = LANG_ROLES.get(adapter, DEFAULT_ROLES)
+        self.lbl_source_role.configure(text=left_role)
+        self.lbl_target_role.configure(text=right_role)
+        if adapter in BIDIRECTIONAL:
+            arrow = "⇄"
+        else:
+            # One way only, pointing where the translation actually travels:
+            # out of the user in virtual-mic/device, into them in media.
+            arrow = "←" if adapter in LEFT_IS_TARGET else "→"
+        self.btn_swap.configure(text=arrow)
 
         active = ADAPTER_DEVICES.get(adapter, set())
         for key, widget in self.device_widgets.items():
@@ -498,16 +544,16 @@ class ChasquiApp:
             self._log("No audio devices found — is sounddevice installed?", WARN)
 
     def _swap_langs(self) -> None:
-        source, target = self.var_source.get(), self.var_target.get()
-        self.var_source.set(target)
-        self.var_target.set(source)
+        left, right = self.var_left.get(), self.var_right.get()
+        self.var_left.set(right)
+        self.var_right.set(left)
 
     def _on_start_stop(self) -> None:
         if self.runner.is_running:
             self.runner.stop()
             return
 
-        source, target = _lang_code(self.var_source.get()), _lang_code(self.var_target.get())
+        source, target = self._lang_pair()
         if source == target:
             self._log("Source and target language are the same — nothing to translate.", ERROR)
             return
@@ -613,7 +659,7 @@ class ChasquiApp:
         self.btn_check.configure(state="disabled" if running or state == "checking" else "normal")
 
         locked = "disabled" if running or state == "checking" else "readonly"
-        for widget in (self.cmb_source, self.cmb_target, self.cmb_adapter, self.cmb_voice):
+        for widget in (self.cmb_left, self.cmb_right, self.cmb_adapter, self.cmb_voice):
             widget.configure(state=locked)
         self.btn_swap.configure(state="disabled" if running or state == "checking" else "normal")
         if locked == "disabled":
