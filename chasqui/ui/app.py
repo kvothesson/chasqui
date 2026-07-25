@@ -14,6 +14,7 @@ from typing import Optional
 from ..adapters import ADAPTER_LABELS, UI_ADAPTER_NAMES
 from ..core.config import Config, find_config, load_config
 from ..core.constants import LANG_NAMES
+from ..core.pricing import format_usd, rates_for
 from .runner import ACCENT, CheckDone, ERROR, INFO, LogLine, SessionRunner, StateChange, TurnLine, WARN
 
 VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
@@ -156,6 +157,11 @@ class ChasquiApp:
         self.latency_total = 0.0
         self._close_deadline = 0.0
         self._devices_loaded = False
+        # Spend carried over from previous runs, so the budget means something
+        # across restarts instead of resetting every time the window opens.
+        self._spent_baseline = 0.0
+        self._spend_since = ""
+        self._cost_ticks = 0
 
         self.root = tk_module.Tk()
         self._build()
@@ -417,6 +423,7 @@ class ChasquiApp:
 
         source = self.config_path or find_config()
         self._log(f"Config: {source or 'built-in defaults (no chasqui.yaml found)'}", INFO)
+        self._log(self._rate_line(), INFO)
         if not self.base_config.api_key:
             self._log(
                 "No API key. Set OPENAI_API_KEY, or api.key in chasqui.yaml, then reopen.",
@@ -449,6 +456,9 @@ class ChasquiApp:
                 self.device_vars[key].set(value)
                 widget = self.device_widgets[key]
                 widget.configure(values=[AUTO, value])
+        spend = data.get("spend") or {}
+        self._spent_baseline = float(spend.get("usd") or 0.0)
+        self._spend_since = spend.get("since") or ""
 
     def _save_settings(self) -> None:
         source, target = self._lang_pair()
@@ -459,6 +469,10 @@ class ChasquiApp:
             "voice": self.var_voice.get(),
             "devices": {
                 key: var.get() for key, var in self.device_vars.items() if var.get() != AUTO
+            },
+            "spend": {
+                "since": self._spend_since or time.strftime("%Y-%m-%d"),
+                "usd": round(self._spent_usd(), 6),
             },
         }
         try:
@@ -615,6 +629,11 @@ class ChasquiApp:
 
     def _tick(self) -> None:
         self._pump()
+        # The meter moves with the clock, not with turns — a session costs the
+        # same whether anyone speaks. Once a second is enough to watch it.
+        self._cost_ticks += 1
+        if self.runner.is_running and self._cost_ticks % 10 == 0:
+            self._update_footer()
         self.root.after(100, self._tick)
 
     def _pump(self) -> None:
@@ -703,11 +722,70 @@ class ChasquiApp:
         else:
             self._log(f"  FAIL — {result.error}", ERROR)
 
+    def _rate_line(self) -> str:
+        """State the rate the meter is using, so a wrong number is catchable.
+
+        A cost display whose assumptions are invisible is worse than none —
+        the user has no way to tell a stale price from a real bill.
+        """
+        pricing = self.base_config.pricing
+        rates = rates_for(self.base_config.model)
+        if rates is None:
+            return f"Cost: no published rate for {self.base_config.model} — not counted."
+
+        if rates.is_duration_billed or pricing.per_minute is not None:
+            per_minute = pricing.per_minute if pricing.per_minute is not None else rates.per_minute
+            line = f"Cost: ${per_minute:.3f}/min per direction"
+            if pricing.count_transcription:
+                extra = pricing.transcription_per_minute
+                if extra is None:
+                    extra = rates_for("gpt-realtime-whisper").per_minute
+                line += f" + ${extra:.3f}/min transcription (assumed billed on top)"
+            return line + ". Bidirectional modes run two directions at once."
+        return (
+            f"Cost: ${rates.audio_in_per_1m:.0f}/${rates.audio_out_per_1m:.0f} "
+            "per 1M audio tokens in/out, counted from the API's own usage reports."
+        )
+
+    def _spent_usd(self) -> float:
+        """Everything spent, including previous runs of the window."""
+        return self._spent_baseline + self.runner.total_usd()
+
+    def _cost_text(self) -> str:
+        """Minutes, money, and what is left of the budget — or nothing at all
+        before the first session, when there is no honest number to show."""
+        price = self.runner.session_price()
+        spent = self._spent_usd()
+        if not spent and not price.minutes:
+            return ""
+
+        parts = [f"{price.minutes:.1f} min"] if price.minutes else []
+        # A tilde, always: the rate is published, but whether the transcription
+        # minute stacks on top of the translate minute is not (see
+        # core/pricing.py). Do not drop it until that is measured.
+        parts.append(f"~{format_usd(spent)}")
+
+        budget = self.base_config.pricing.budget
+        if budget:
+            left = budget - spent
+            parts.append(
+                f"{format_usd(left)} left of {format_usd(budget)}" if left > 0
+                else f"over budget by {format_usd(-left)}"
+            )
+        if not price.exact and price.note:
+            parts.append(price.note)
+        return "   ·   ".join(parts)
+
     def _update_footer(self) -> None:
         average = self.latency_total / self.turns if self.turns else 0.0
-        self.footer.configure(
-            text=f"{self.base_config.model}   ·   {self.turns} turns   ·   avg {average:.0f}ms"
-        )
+        parts = [
+            self.base_config.model,
+            f"{self.turns} turns",
+            f"avg {average:.0f}ms",
+        ]
+        if cost := self._cost_text():
+            parts.append(cost)
+        self.footer.configure(text="   ·   ".join(parts))
 
     # ------------------------------------------------------------------
 

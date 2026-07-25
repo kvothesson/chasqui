@@ -13,6 +13,7 @@ import websockets
 
 from .audio import AudioStream
 from .constants import LANG_NAMES, REALTIME_URL, REALTIME_TRANSLATE_URL
+from .pricing import Usage
 
 # Language codes → full names used by gpt-realtime-translate
 TRANSLATE_LANG_NAMES = {
@@ -71,6 +72,10 @@ class Pipeline:
         self.vad_silence_ms = vad_silence_ms
         self._stop_event = threading.Event()
         self._is_translate_model = "translate" in model
+        # What this session has cost so far, in the units its endpoint bills
+        # in: audio bytes for the duration-billed translate model, tokens for
+        # gpt-realtime (which reports them on response.done).
+        self.usage = Usage()
         # CHASQUI_DEBUG=1 prints every server event type and audio send stats
         self._debug = os.environ.get("CHASQUI_DEBUG", "") not in ("", "0")
 
@@ -252,6 +257,9 @@ class Pipeline:
                 "type": event_type,
                 "audio": base64.b64encode(chunk).decode(),
             }))
+            # The billable quantity for the translate endpoint: minutes of
+            # audio actually sent, not wall clock — a stalled mic costs nothing.
+            self.usage.audio_bytes_sent += len(chunk)
             sent += 1
             if self._debug and sent % 50 == 0:  # every ~5s of audio
                 print(f"  [debug] sent {sent} audio chunks", flush=True)
@@ -347,7 +355,9 @@ class Pipeline:
                 "response.output_audio.delta",
                 "session.output_audio.delta",
             ):
-                output_stream.write(base64.b64decode(event["delta"]))
+                audio = base64.b64decode(event["delta"])
+                self.usage.audio_bytes_received += len(audio)
+                output_stream.write(audio)
 
             # Translated text transcript (incremental)
             elif t in (
@@ -365,8 +375,30 @@ class Pipeline:
                 "session.output_audio.done",
                 "session.output_transcript.done",
             ):
+                self._record_usage(event)
                 _flush()
 
             elif t == "error":
                 msg = event.get("error", {}).get("message", str(event))
                 raise RuntimeError(f"Realtime API error: {msg}")
+
+    def _record_usage(self, event: dict) -> None:
+        """Accumulate the token counts on a `response.done`.
+
+        Only the token-billed models send this — the translate endpoint bills
+        by the minute and reports nothing, which is why the byte counters
+        above exist. Never raises: a cost meter must not kill a session.
+        """
+        try:
+            usage = (event.get("response") or {}).get("usage") or {}
+            if not usage:
+                return
+            incoming = usage.get("input_token_details") or {}
+            outgoing = usage.get("output_token_details") or {}
+            self.usage.audio_input_tokens += incoming.get("audio_tokens", 0)
+            self.usage.text_input_tokens += incoming.get("text_tokens", 0)
+            self.usage.audio_output_tokens += outgoing.get("audio_tokens", 0)
+            self.usage.text_output_tokens += outgoing.get("text_tokens", 0)
+        except Exception as e:
+            if self._debug:
+                print(f"  [debug] usage parse failed: {e}", flush=True)

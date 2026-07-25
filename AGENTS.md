@@ -17,6 +17,7 @@ chasqui/
     session.py      ← Turn log + session export
     constants.py    ← LANG_NAMES, API endpoint URLs
     selftest.py     ← run_check(): TTS → pipeline round trip, no audio hardware
+    pricing.py      ← cost meter: rate table + estimate() over Pipeline.usage
     windevice.py    ← Windows default audio output switcher (PowerShell AudioDeviceCmdlets)
   adapters/
     __init__.py     ← adapter registry (ADAPTER_PATHS, build_adapter) — lazy imports
@@ -176,6 +177,19 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   'session.modalities'"): voice/formats/turn_detection now live under
   `output_modalities` + `audio.input`/`audio.output` (see
   `Pipeline._build_realtime_session`).
+- **`gpt-realtime-translate` is billed by DURATION, not tokens** ($0.034/min as
+  of 2026-07-25). That is *why* it never sends `response.done` — that event
+  carries the `usage` object, and there is nothing to report per response when
+  the meter is a clock. So the cost meter counts the audio bytes chasqui
+  streams (`Pipeline.usage`), and only reads `usage` events for `gpt-realtime`,
+  which does bill by tokens. **Bidirectional modes run two pipelines = two
+  billed streams**; anything summing cost must add both or it reports half.
+  Unresolved: whether the separately-priced `gpt-realtime-whisper` input
+  transcription ($0.017/min) stacks on top. Counted by default — measure a
+  timed session against the dashboard and set `pricing.count_transcription`.
+- **There is no OpenAI endpoint for remaining credit balance.** `/v1/organization/costs`
+  gives spend (not balance) and needs an *admin* key, which does not belong in
+  a chasqui.yaml. "Remaining" in the UI is the user's own `pricing.budget`.
 - **The UI redirects `sys.stdout` process-wide** while a session runs (adapters
   only communicate by printing). It is restored in a `finally`; if you add an
   early return there, every later print in the process disappears into a dead
