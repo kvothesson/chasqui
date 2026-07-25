@@ -28,6 +28,16 @@ class PairModeConfig:
 
 
 @dataclass
+class PricingConfig:
+    """Cost meter. Rates default to core.pricing; set them here when OpenAI
+    changes a price, so it stays a config edit."""
+    per_minute: Optional[float] = None              # duration-billed models
+    transcription_per_minute: Optional[float] = None
+    count_transcription: bool = True                # see core/pricing.py
+    budget: Optional[float] = None                  # USD; enables "remaining"
+
+
+@dataclass
 class LoggingConfig:
     save_session: bool = False
     session_dir: Path = field(
@@ -58,6 +68,7 @@ class Config:
     device: DeviceConfig = field(default_factory=DeviceConfig)
     pair_mode: PairModeConfig = field(default_factory=PairModeConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    pricing: PricingConfig = field(default_factory=PricingConfig)
 
     # VAD tuning
     vad_threshold: float = 0.5
@@ -104,6 +115,14 @@ class Config:
                 enabled=pair.get("enabled", False),
                 role=pair.get("role", "primary"),
                 peer_address=pair.get("peer_address"),
+            )
+
+        if price := d.get("pricing"):
+            cfg.pricing = PricingConfig(
+                per_minute=price.get("per_minute"),
+                transcription_per_minute=price.get("transcription_per_minute"),
+                count_transcription=price.get("count_transcription", True),
+                budget=price.get("budget"),
             )
 
         if log := d.get("logging"):

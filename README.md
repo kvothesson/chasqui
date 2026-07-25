@@ -31,6 +31,14 @@ Windows default mic and output while they run and hand them back on exit, so use
 Stop (or just close the window — it waits for the handover) instead of killing
 the process.
 
+The footer keeps a running cost. `gpt-realtime-translate` bills by the minute,
+so chasqui counts the audio it streams and prices it — and a bidirectional
+session pays for two directions at once, which is worth seeing before a long
+call. Set `pricing.budget` in chasqui.yaml to get "$X left" alongside it.
+
+> OpenAI exposes no API for your remaining credit balance, so that budget is
+> your own number, tracked locally — not a reading of your account.
+
 Tkinter ships with Python, so the UI adds no dependency. On Debian/Ubuntu it
 lives in a separate package: `sudo apt install python3-tk`.
 

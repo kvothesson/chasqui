@@ -16,6 +16,7 @@ from typing import Optional
 
 from ..adapters import build_adapter
 from ..core.config import Config
+from ..core.pricing import Price, Usage, estimate
 from ..core.selftest import CheckResult, run_check
 
 # Log severities. The UI maps these to colors; nothing else depends on them.
@@ -118,6 +119,11 @@ class SessionRunner:
         self._thread: Optional[threading.Thread] = None
         self._check_thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
+        self._config: Optional[Config] = None
+        # Cost of sessions that already ended in this window. The live one is
+        # read off its pipelines and added on top, so the total does not drop
+        # back to zero the moment a session stops.
+        self._closed_usd = 0.0
 
     # ------------------------------------------------------------------
     # State
@@ -149,6 +155,7 @@ class SessionRunner:
             if self.is_running:
                 raise RuntimeError("a session is already running")
             config.validate()
+            self._config = config
             self._adapter = build_adapter(config)
             self._adapter.on_turn = self._on_turn
             self._thread = threading.Thread(
@@ -178,6 +185,36 @@ class SessionRunner:
         thread.join(timeout=timeout)
         return not thread.is_alive()
 
+    # ------------------------------------------------------------------
+    # Cost
+    # ------------------------------------------------------------------
+
+    def session_price(self) -> Price:
+        """What the live session has cost so far. Zero when nothing runs.
+
+        Bidirectional modes run two pipelines, each with its own billed
+        stream — summing their usage is what makes headset show its real
+        double rate instead of half of it.
+        """
+        adapter, config = self._adapter, self._config
+        if adapter is None or config is None:
+            return Price()
+
+        usage = Usage()
+        for pipeline in getattr(adapter, "_pipelines", []):
+            usage = usage + pipeline.usage
+
+        return estimate(
+            config.model, usage,
+            count_transcription=config.pricing.count_transcription,
+            per_minute=config.pricing.per_minute,
+            transcription_per_minute=config.pricing.transcription_per_minute,
+        )
+
+    def total_usd(self) -> float:
+        """Everything spent since this runner was created."""
+        return self._closed_usd + self.session_price().usd
+
     def _run_session(self, adapter) -> None:
         prev_stdout, prev_stderr = sys.stdout, sys.stderr
         # Tee to the stdout we are replacing, not to sys.__stdout__: cli.py
@@ -194,6 +231,9 @@ class SessionRunner:
         finally:
             writer.drain()
             sys.stdout, sys.stderr = prev_stdout, prev_stderr
+            # Bank the cost BEFORE dropping the adapter — the pipelines are
+            # the only place the usage counters live.
+            self._closed_usd += self.session_price().usd
             self._adapter = None
 
     # ------------------------------------------------------------------

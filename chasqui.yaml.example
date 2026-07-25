@@ -29,6 +29,14 @@ pair_mode:
   role: primary                     # primary | secondary
   peer_address: "192.168.1.x:7373"
 
+pricing:
+  # The UI's cost meter. Rates default to core/pricing.py (OpenAI's published
+  # prices as of 2026-07-25); set them here when a price changes.
+  # per_minute: 0.034               # gpt-realtime-translate, PER DIRECTION
+  # transcription_per_minute: 0.017 # gpt-realtime-whisper, input transcription
+  count_transcription: true         # false once you confirm it's included
+  budget: 20.00                     # USD; shows "$X left" in the footer
+
 logging:
   save_session: true
   show_transcript: true
