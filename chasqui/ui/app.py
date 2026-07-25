@@ -15,6 +15,7 @@ from ..adapters import ADAPTER_LABELS, UI_ADAPTER_NAMES
 from ..core.config import Config, find_config, load_config
 from ..core.constants import LANG_NAMES
 from ..core.pricing import format_usd, rates_for
+from .icon import ensure_ico, tk_photo_image
 from .runner import ACCENT, CheckDone, ERROR, INFO, LogLine, SessionRunner, StateChange, TurnLine, WARN
 
 VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
@@ -173,6 +174,26 @@ class ChasquiApp:
     # Layout
     # ------------------------------------------------------------------
 
+    def _apply_icon(self, root) -> None:
+        """Taskbar and title-bar icon, generated on the fly.
+
+        Exactly ONE of the two paths, never both: with iconphoto and
+        iconbitmap set on the same window Tk quietly falls back to its own
+        default icon — no error, just the wrong picture (verified on Tk
+        8.6.15). Windows takes the .ico, which is also what the desktop
+        shortcut points at; everyone else gets the in-memory image.
+        """
+        try:
+            if sys.platform == "win32":
+                path = ensure_ico()
+                if path:
+                    root.iconbitmap(default=str(path))
+                    return
+            self._icon_image = tk_photo_image(self.tk, 64)   # keep a reference
+            root.iconphoto(True, self._icon_image)
+        except Exception:
+            pass   # an icon is never worth failing a launch over
+
     def _build(self) -> None:
         from tkinter import ttk
 
@@ -180,6 +201,7 @@ class ChasquiApp:
         root.title("chasqui")
         root.configure(bg=C_BG)
         root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._apply_icon(root)
 
         ui_font = "Segoe UI" if sys.platform == "win32" else "TkDefaultFont"
         mono_font = "Consolas" if sys.platform == "win32" else "TkFixedFont"
@@ -881,6 +903,16 @@ def launch(config_path: Optional[str] = None) -> int:
             file=sys.stderr,
         )
         return 1
+
+    # Windows groups taskbar buttons by AppUserModelID, and a bare python.exe
+    # inherits the interpreter's — the window would sit under a generic Python
+    # icon next to any other script. Must happen before the window exists.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("chasqui.ui")
+        except Exception:
+            pass
 
     ChasquiApp(tkinter, config_path=config_path).run()
     return 0

@@ -39,6 +39,16 @@ call. Set `pricing.budget` in chasqui.yaml to get "$X left" alongside it.
 > OpenAI exposes no API for your remaining credit balance, so that budget is
 > your own number, tracked locally — not a reading of your account.
 
+For a desktop launcher:
+
+```bash
+chasqui icon --shortcut
+```
+
+That writes the icon — drawn in code, there is no image file in the repo — and
+puts a shortcut on your desktop. It launches through `pythonw`, so no console
+window comes along for the ride.
+
 Tkinter ships with Python, so the UI adds no dependency. On Debian/Ubuntu it
 lives in a separate package: `sudo apt install python3-tk`.
 
@@ -57,6 +67,7 @@ lives in a separate package: `sudo apt install python3-tk`.
 
 ```bash
 chasqui ui                                     # desktop interface
+chasqui icon --shortcut                        # desktop launcher + icon
 chasqui translate "¿Dónde está la estación?"   # one-shot text translation
 chasqui listen --adapter device                # live audio translation
 chasqui listen --adapter headset --mic "USB Micro" --earphone "Auriculares"

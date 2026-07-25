@@ -5,16 +5,32 @@ import io
 from pathlib import Path
 from typing import Optional
 
-# Force UTF-8 output on Windows so Japanese/CJK characters don't crash
-if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
 import click
 
 from .adapters import ADAPTER_NAMES, build_adapter
 from .core.config import Config, load_config
 from .core.constants import LANG_NAMES
+
+
+def _force_utf8() -> None:
+    """Force UTF-8 output on Windows so Japanese/CJK characters don't crash.
+
+    Every access is guarded: under pythonw.exe — which is how the desktop
+    shortcut launches the UI without dragging a console along — the process
+    has no standard streams at all, and reading .encoding off None killed the
+    CLI during import, before anything existed to report why. From the desktop
+    that looked like double-clicking the icon and nothing ever happening.
+    """
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        encoding = getattr(stream, "encoding", None)
+        buffer = getattr(stream, "buffer", None)
+        if buffer is None or not encoding or encoding.lower() == "utf-8":
+            continue
+        setattr(sys, name, io.TextIOWrapper(buffer, encoding="utf-8", errors="replace"))
+
+
+_force_utf8()
 
 
 def _load_config(config_path: Optional[str], **overrides) -> Config:
@@ -218,6 +234,65 @@ def ui(config_path):
     """
     from .ui.app import launch
     sys.exit(launch(config_path=config_path))
+
+
+@cli.command()
+@click.option("--out", "out_path", default=None, metavar="PATH",
+              help="Where to write the .ico (default: ~/.chasqui/chasqui.ico)")
+@click.option("--shortcut", is_flag=True,
+              help="Also put a desktop shortcut that opens the UI (Windows)")
+def icon(out_path, shortcut):
+    """Write the chasqui icon as a .ico file.
+
+    \b
+    The icon is drawn in code, not stored — no image files in the repo.
+    Use it for a desktop shortcut, or let --shortcut create one for you.
+    """
+    from .ui.icon import DEFAULT_ICON_PATH, write_ico
+
+    path = Path(out_path) if out_path else DEFAULT_ICON_PATH
+    written = write_ico(path)
+    click.echo(f"Wrote {written}")
+
+    if not shortcut:
+        return
+
+    if sys.platform != "win32":
+        click.echo("--shortcut only works on Windows.", err=True)
+        sys.exit(1)
+
+    # pythonw.exe, not the chasqui.exe console script: launching a console
+    # entry point from the desktop parks a black console window behind the
+    # gadget for as long as it runs.
+    target = Path(sys.executable).with_name("pythonw.exe")
+    arguments = "-m chasqui ui"
+    if not target.exists():
+        import shutil
+        found = shutil.which("chasqui")
+        if not found:
+            click.echo(f"Error: found neither pythonw.exe next to {sys.executable} "
+                       "nor a chasqui command on PATH.", err=True)
+            sys.exit(1)
+        target, arguments = Path(found), "ui"
+
+    import subprocess
+    script = f"""
+$s = (New-Object -ComObject WScript.Shell).CreateShortcut(
+    [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'chasqui.lnk'))
+$s.TargetPath = '{target}'
+$s.Arguments = '{arguments}'
+$s.IconLocation = '{written}'
+$s.Description = 'chasqui — real-time simultaneous translation'
+$s.Save()
+"""
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True, encoding="utf-8", errors="replace",
+    )
+    if result.returncode != 0:
+        click.echo(f"Error creating the shortcut: {result.stderr.strip()}", err=True)
+        sys.exit(1)
+    click.echo("Desktop shortcut created: chasqui")
 
 
 @cli.command()
