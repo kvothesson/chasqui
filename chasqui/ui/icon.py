@@ -1,9 +1,14 @@
 """The chasqui icon, drawn in code.
 
-No image files in the repo and no Pillow: a rounded terracotta tile with two
-opposing arrows — the same ⇄ the window uses between the language pickers,
-which is the whole product in one glyph. Everything here is stdlib (zlib and
-struct), so the icon exists on any machine that can run chasqui.
+No image files in the repo and no Pillow: an ice-blue hexagon with two opposing
+arrows cut out of it — the same ⇄ the window uses between the language pickers.
+Everything here is stdlib (zlib and struct), so the icon exists on any machine
+that can run chasqui.
+
+A hexagon rather than the rounded square it started as: it is the shape the
+window's status indicator uses, so icon and app read as one object, and it is
+the one silhouette in a taskbar full of rounded squares that is recognisable
+without being read.
 
 Legibility at 16px drove the design. A running chasqui, a quipu, anything with
 detail turns to mud at taskbar size; two thick arrows survive.
@@ -17,13 +22,30 @@ import zlib
 from pathlib import Path
 from typing import Iterable, Optional
 
-# The window's accent, so the icon and the app are visibly the same thing.
-ACCENT = (226, 104, 61)
-GLYPH = (255, 255, 255)
+# Ice on night. The tile carries the colour and the arrows are cut out of it:
+# a filled tile keeps its silhouette against the near-black Windows taskbar,
+# where a dark tile dissolves and leaves the arrows floating with no icon
+# around them (checked against #1c1c1c, not guessed).
+#
+# Same ice as the window's accent, so the icon and the app read as one thing.
+TILE = (94, 197, 226)     # ice — the same #5ec5e2 as C_ACCENT in app.py
+# Deep blue-green rather than black: near-black on cyan reads as a sticker
+# stamped on the tile, this belongs to the same family. It is also the floor
+# — white arrows on ice measure 2:1, well under the 3:1 a graphical object
+# needs, and turn to mush at 16px. Measured, not eyeballed (see tests).
+GLYPH = (23, 57, 74)      # navy
 
 ICO_SIZES = (16, 32, 48, 64, 128, 256)
 
-CORNER_RADIUS = 0.22          # fraction of the side
+# Flat-top hexagon in the unit square: vertices left and right, flat edges top
+# and bottom. Flat-top and not pointy-top because the arrows run horizontally —
+# a pointy-top hexagon is narrowest exactly where they need to be widest, and
+# the arrowheads got clipped.
+#
+# Half-width at height y, which is what the glyph has to stay inside:
+#   y <= 0.5 → 0.25 + 0.5 * y        (widening from the flat top)
+#   y >  0.5 → 0.25 + 0.5 * (1 - y)  (narrowing back to the flat bottom)
+HEX_TOP_HALF = 0.25           # half-width of the flat top and bottom edges
 
 # Arrows in a 0..1 square. Right-pointing on top, left-pointing below —
 # deliberately fat: at 16px a thin shaft disappears into the background.
@@ -36,13 +58,20 @@ ARROW_RIGHT = [
 ARROW_LEFT = [(1.0 - x, y + 0.30) for x, y in ARROW_RIGHT]
 
 # Hinting, the old-fashioned way. At 16px the shafts above are 1.6 pixels tall
-# and antialias into a pink smudge — the taskbar would show a blob. Below
+# and antialias into a smudge — the taskbar would show a blob. Below
 # SMALL_SIZE the glyph gets its own fatter geometry: fewer, thicker strokes
 # filling more of the tile, which is what survives at that scale.
+#
+# These are also pulled in from the square version's 0.12/0.88: on a hexagon
+# the corners are not there to grow into, and a shaft end that overhangs the
+# edge gets sliced flat instead of tapering — which looks like a rendering bug,
+# not a design. The shaft ends sit 0.01 inside the hexagon edge at the height
+# they start (x 0.15 where the half-width is 0.36), which is as wide as they go
+# without touching it.
 SMALL_SIZE = 32
 SMALL_ARROW_RIGHT = [
-    (0.12, 0.22), (0.56, 0.22), (0.56, 0.12), (0.88, 0.31),
-    (0.56, 0.50), (0.56, 0.40), (0.12, 0.40),
+    (0.15, 0.22), (0.58, 0.22), (0.58, 0.13), (0.86, 0.31),
+    (0.58, 0.49), (0.58, 0.40), (0.15, 0.40),
 ]
 SMALL_ARROW_LEFT = [(1.0 - x, y + 0.38) for x, y in SMALL_ARROW_RIGHT]
 
@@ -74,12 +103,15 @@ def _bounds(polygon: list[tuple[float, float]]) -> tuple[float, float, float, fl
     return min(xs), min(ys), max(xs), max(ys)
 
 
-def _in_rounded_square(x: float, y: float, radius: float) -> bool:
-    """Unit square with rounded corners, tested analytically."""
-    cx = min(max(x, radius), 1.0 - radius)
-    cy = min(max(y, radius), 1.0 - radius)
-    dx, dy = x - cx, y - cy
-    return dx * dx + dy * dy <= radius * radius
+def _in_hexagon(x: float, y: float) -> bool:
+    """Flat-top hexagon filling the unit square, tested analytically.
+
+    One comparison against the half-width at this height — cheaper than a
+    polygon test, and it is the same formula the arrow geometry was fitted to,
+    so the two can't drift apart.
+    """
+    half = HEX_TOP_HALF + 0.5 * (y if y <= 0.5 else 1.0 - y)
+    return abs(x - 0.5) <= half
 
 
 def render_rgba(size: int, samples: int = 3) -> bytes:
@@ -97,7 +129,7 @@ def render_rgba(size: int, samples: int = 3) -> bytes:
                 y = (py * samples + sy + 0.5) * step
                 for sx in range(samples):
                     x = (px * samples + sx + 0.5) * step
-                    if not _in_rounded_square(x, y, CORNER_RADIUS):
+                    if not _in_hexagon(x, y):
                         continue
                     tile_hits += 1
                     for poly, (x0, y0, x1, y1) in polygons:
@@ -109,13 +141,12 @@ def render_rgba(size: int, samples: int = 3) -> bytes:
                 out += b"\x00\x00\x00\x00"
                 continue
 
-            alpha = tile_hits / total
             glyph = glyph_hits / tile_hits
             out += bytes((
-                round(ACCENT[0] + (GLYPH[0] - ACCENT[0]) * glyph),
-                round(ACCENT[1] + (GLYPH[1] - ACCENT[1]) * glyph),
-                round(ACCENT[2] + (GLYPH[2] - ACCENT[2]) * glyph),
-                round(alpha * 255),
+                round(TILE[0] + (GLYPH[0] - TILE[0]) * glyph),
+                round(TILE[1] + (GLYPH[1] - TILE[1]) * glyph),
+                round(TILE[2] + (GLYPH[2] - TILE[2]) * glyph),
+                round(tile_hits / total * 255),
             ))
     return bytes(out)
 
@@ -177,14 +208,26 @@ def tk_photo_image(tk_module, size: int = 64):
 # Cached next to the config so a desktop shortcut has a stable path to point at.
 DEFAULT_ICON_PATH = Path.home() / ".chasqui" / "chasqui.ico"
 
+# Bump whenever the artwork changes. The path stays the same so existing
+# desktop shortcuts keep working — without this marker the first cached file
+# would outlive every redesign, and users would keep the old icon forever.
+ICON_VERSION = 5
+
+
+def _version_marker(path: Path) -> Path:
+    return path.with_suffix(path.suffix + ".version")
+
 
 def ensure_ico(path: Optional[Path] = None) -> Optional[Path]:
-    """Write the .ico if it isn't there yet. None if the disk says no —
+    """Write the .ico if it's missing or stale. None if the disk says no —
     an icon is never worth failing a launch over."""
     path = Path(path) if path else DEFAULT_ICON_PATH
+    marker = _version_marker(path)
     try:
-        if not path.exists() or path.stat().st_size == 0:
+        current = marker.read_text(encoding="utf-8").strip() if marker.exists() else ""
+        if not path.exists() or path.stat().st_size == 0 or current != str(ICON_VERSION):
             write_ico(path)
+            marker.write_text(str(ICON_VERSION), encoding="utf-8")
         return path
     except Exception:
         return None

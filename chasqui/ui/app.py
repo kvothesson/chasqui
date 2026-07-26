@@ -6,6 +6,7 @@ Tkinter on purpose — it ships with Python, so the UI adds no dependency and
 """
 
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -65,39 +66,87 @@ LEFT_IS_TARGET = {"media"}
 # "you are being broadcast".
 BIDIRECTIONAL = {"headset", "meet", "bridge"}
 
+# Labels have to stand on their own: the compact window has no room for the
+# explanatory column that used to sit beside them, and "App input" / "App
+# output" mean nothing without it. Each one now names both ends of the wire.
 DEVICE_FIELDS = [
-    ("mic",      "Microphone",   "Your voice goes in here",          "input"),
-    ("speaker",  "App input",    "Virtual cable the app listens to",  "output"),
+    ("mic",      "Your mic",     "Your voice goes in here",           "input"),
+    ("speaker",  "To the app",   "Virtual cable the app listens to",  "output"),
     ("earphone", "You hear",     "Where the translation reaches you", "output"),
-    ("loopback", "App output",   "Capture of what the app is saying", "input"),
+    ("loopback", "From the app", "Capture of what the app is saying", "input"),
 ]
 
 AUTO = "Auto"
 
+# One wording for the missing key, used at startup and again if Start is
+# pressed anyway. Two phrasings of the same problem read as two problems.
+NO_API_KEY = "No API key. Set OPENAI_API_KEY, or api.key in chasqui.yaml, then press Start."
+
 # Palette. Dark on purpose: the log is the centre of the window and reads like
 # a console, and the app is meant to sit next to a call, not compete with it.
-C_BG      = "#15161a"
-C_PANEL   = "#1d1f26"
-C_BORDER  = "#2c2f39"
-C_TEXT    = "#e9e9ee"
-C_MUTED   = "#8b8e9b"
-C_DISABLED = "#4c4f5c"
-C_ACCENT  = "#e2683d"   # terracotta — the chasqui's road
+# The night is blue, not grey — this is a node in a cold place, not a text
+# editor, and the blue cast is what makes the ice read as ice instead of as
+# "the highlight colour".
+C_BG      = "#0b0e14"
+C_PANEL   = "#12161f"
+C_BORDER  = "#1e2634"
+# Dimmed ice. Every panel gets a 2px stripe of it down the left edge — the road
+# the chasqui runs on. Dimmed rather than full accent because three full-ice
+# stripes in a 400px window shout, and the accent has to stay the loudest thing
+# on screen for Start to keep working as a target.
+C_SPINE   = "#2a5a6b"
+# The ring the status light sits in. Lighter than the border grey on purpose:
+# at C_BORDER the socket vanished and the indicator went back to being a dot
+# floating in the dark, which is the shape it was drawn to stop being.
+C_SOCKET  = "#37455a"
+C_TEXT    = "#dfe6ef"
+C_MUTED   = "#6f7c90"
+C_DISABLED = "#3a4353"
+# Ice, not the warm orange it started as. Two reasons, both practical: an
+# orange Start and a red Stop look alike at a glance, and this is a gadget you
+# read out of the corner of your eye — ice → red is unmistakable. It also stops
+# the taskbar icon competing with every other orange icon there.
+C_ACCENT  = "#5ec5e2"   # ice — the cold road the chasqui runs
+C_ON_ACCENT = "#08131a"  # text ON the accent: white on ice is unreadable
 C_OK      = "#4ec9a0"
-C_WARN    = "#e2b33d"
+C_WARN    = "#e0a33c"   # amber — the only warm thing in the window, so it reads
 C_ERROR   = "#e8615d"
-C_IN      = "#6aa8f0"
+# What comes back is violet, what goes out is ice. Two directions, two colours:
+# in a bidirectional call the log is the only place you can see which way a line
+# travelled, and blue-on-blue made both halves look like one stream.
+C_IN      = "#a98bf5"
 
 LEVEL_COLORS = {INFO: C_TEXT, ACCENT: C_ACCENT, WARN: C_WARN, ERROR: C_ERROR}
 
+# The state names are the system's own vocabulary, not the user's task: they say
+# what the node is doing, in one word, at a glance. "Running" and "Stopping..."
+# were the same shape and length and blurred into each other out of the corner
+# of an eye — these differ in silhouette as well as colour.
 STATE_COLORS = {
-    "idle":     (C_MUTED,  "Idle"),
-    "starting": (C_WARN,   "Starting..."),
-    "running":  (C_OK,     "Running"),
-    "stopping": (C_WARN,   "Stopping..."),
-    "checking": (C_WARN,   "Checking..."),
-    "error":    (C_ERROR,  "Error"),
+    "idle":     (C_MUTED,  "LATENT"),
+    "starting": (C_WARN,   "COMPILING"),
+    "running":  (C_OK,     "ON ROUTE"),
+    "stopping": (C_WARN,   "UNWINDING"),
+    "checking": (C_WARN,   "PING"),
+    "error":    (C_ERROR,  "GLITCH"),
 }
+
+
+def hex_points(cx: float, cy: float, radius: float) -> list[float]:
+    """Flat-top hexagon as a flat [x, y, x, y, ...] list for Canvas.
+
+    Flat-top, not pointy-top: it is the same silhouette as the taskbar icon, and
+    at the 13px the status indicator gets, a pointy-top hexagon's top vertex
+    lands on a single pixel and the shape reads as a circle anyway.
+    """
+    return [
+        coord
+        for i in range(6)
+        for coord in (
+            cx + radius * math.cos(math.pi / 3 * i),
+            cy + radius * math.sin(math.pi / 3 * i),
+        )
+    ]
 
 
 def _lang_choices() -> list[str]:
@@ -163,6 +212,7 @@ class ChasquiApp:
         self._spent_baseline = 0.0
         self._spend_since = ""
         self._cost_ticks = 0
+        self._last_log_line = ""
 
         self.root = tk_module.Tk()
         self._build()
@@ -194,6 +244,50 @@ class ChasquiApp:
         except Exception:
             pass   # an icon is never worth failing a launch over
 
+    def _dark_titlebar(self, root) -> None:
+        """Ask Windows for a dark title bar.
+
+        Without it the window is a black gadget wearing a bright white cap —
+        which is exactly the part that sits against the call you parked it
+        next to. DWM only takes the request once the window has a real HWND,
+        hence the update_idletasks; attribute 20 is the modern name and 19 the
+        1809-1909 one, so try 20 and fall back.
+        """
+        if sys.platform != "win32":
+            return
+        try:
+            import ctypes
+
+            root.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
+            enabled = ctypes.c_int(1)
+            for attribute in (20, 19):
+                ok = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, attribute, ctypes.byref(enabled), ctypes.sizeof(enabled))
+                if ok == 0:
+                    return
+        except Exception:
+            pass   # cosmetic, and older Windows simply does not have it
+
+    def _panel(self):
+        """A panel with the ice stripe down its left edge.
+
+        Returns (wrapper, inner): grid the wrapper, fill the inner. The stripe
+        is a plain tk.Frame rather than a border because ttk's clam theme draws
+        borders on all four sides or none, and a box around every group turns a
+        400px window into a form. One edge groups just as well and costs 2px.
+        """
+        from tkinter import ttk
+
+        wrapper = ttk.Frame(self.outer, style="Panel.TFrame")
+        wrapper.columnconfigure(1, weight=1)
+        wrapper.rowconfigure(0, weight=1)
+        stripe = self.tk.Frame(wrapper, bg=C_SPINE, width=2, bd=0, highlightthickness=0)
+        stripe.grid(row=0, column=0, sticky="ns")
+        inner = ttk.Frame(wrapper, style="Panel.TFrame", padding=10)
+        inner.grid(row=0, column=1, sticky="nsew")
+        return wrapper, inner
+
     def _build(self) -> None:
         from tkinter import ttk
 
@@ -202,10 +296,17 @@ class ChasquiApp:
         root.configure(bg=C_BG)
         root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._apply_icon(root)
+        self._dark_titlebar(root)
 
         ui_font = "Segoe UI" if sys.platform == "win32" else "TkDefaultFont"
         mono_font = "Consolas" if sys.platform == "win32" else "TkFixedFont"
         self.mono = (mono_font, 9)
+
+        # Two typefaces with one job each. Mono is the machine talking — the
+        # wordmark, the state, the buttons, the captions: everything the window
+        # says about itself. The proportional face is for the things the USER
+        # picked, above all device names, which are long, full of parentheses,
+        # and unreadable in a fixed pitch at this width.
 
         style = ttk.Style(root)
         try:
@@ -218,12 +319,20 @@ class ChasquiApp:
         style.configure("Panel.TFrame", background=C_PANEL)
         style.configure("TLabel", background=C_BG, foreground=C_TEXT)
         style.configure("Panel.TLabel", background=C_PANEL, foreground=C_TEXT)
-        style.configure("Muted.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 8))
+        style.configure("Muted.TLabel", background=C_BG, foreground=C_MUTED, font=(mono_font, 8))
         style.configure("PanelMuted.TLabel", background=C_PANEL, foreground=C_MUTED, font=(ui_font, 8))
-        style.configure("Title.TLabel", background=C_BG, foreground=C_TEXT, font=(ui_font, 12, "bold"))
-        style.configure("Role.TLabel", background=C_PANEL, foreground=C_ACCENT, font=(ui_font, 8, "bold"))
-        style.configure("Status.TLabel", background=C_BG, foreground=C_MUTED, font=(ui_font, 9))
-        style.configure("Cost.TLabel", background=C_BG, foreground=C_TEXT, font=(ui_font, 9))
+        # Tk has no letter-spacing, so the wordmark is spaced by hand in the
+        # string itself. Worth the ugliness: at 12pt an unspaced seven-letter
+        # word is a lump, and spacing is the whole difference between a label
+        # and a mark.
+        style.configure("Title.TLabel", background=C_BG, foreground=C_TEXT,
+                        font=(mono_font, 12, "bold"))
+        style.configure("Tag.TLabel", background=C_BG, foreground=C_SPINE, font=(mono_font, 7))
+        style.configure("Role.TLabel", background=C_PANEL, foreground=C_ACCENT,
+                        font=(mono_font, 8, "bold"))
+        style.configure("Status.TLabel", background=C_BG, foreground=C_MUTED,
+                        font=(mono_font, 8, "bold"))
+        style.configure("Cost.TLabel", background=C_BG, foreground=C_TEXT, font=(mono_font, 9))
 
         style.configure(
             "TCombobox", fieldbackground=C_PANEL, background=C_PANEL, foreground=C_TEXT,
@@ -240,10 +349,12 @@ class ChasquiApp:
         root.option_add("*TCombobox*Listbox.background", C_PANEL)
         root.option_add("*TCombobox*Listbox.foreground", C_TEXT)
         root.option_add("*TCombobox*Listbox.selectBackground", C_ACCENT)
-        root.option_add("*TCombobox*Listbox.selectForeground", "#ffffff")
+        # Same rule as the buttons: white on ice is unreadable, and the dropdown
+        # is where you actually read the highlighted row.
+        root.option_add("*TCombobox*Listbox.selectForeground", C_ON_ACCENT)
 
         for name, bg, fg in (
-            ("Accent.TButton", C_ACCENT, "#ffffff"),
+            ("Accent.TButton", C_ACCENT, C_ON_ACCENT),
             ("Stop.TButton", C_ERROR, "#ffffff"),
             ("Ghost.TButton", C_PANEL, C_TEXT),
             # Sits on a panel, so it needs to be lighter than one to read as a button.
@@ -252,7 +363,7 @@ class ChasquiApp:
             style.configure(
                 name, background=bg, foreground=fg, bordercolor=C_BORDER,
                 lightcolor=bg, darkcolor=bg, focuscolor=bg,
-                font=(ui_font, 9, "bold"), padding=(10, 7), relief="flat",
+                font=(mono_font, 9, "bold"), padding=(10, 7), relief="flat",
             )
             style.map(
                 name,
@@ -273,19 +384,19 @@ class ChasquiApp:
         style.configure(
             "Pin.TButton", background=C_BG, foreground=C_ACCENT, bordercolor=C_BG,
             lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
-            padding=(4, 4), font=(ui_font, 9), relief="flat",
+            padding=(4, 4), font=(ui_font, 10), relief="flat",
         )
         style.map("Pin.TButton", background=[("active", C_PANEL)])
         style.configure(
             "Unpin.TButton", background=C_BG, foreground=C_DISABLED, bordercolor=C_BG,
             lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
-            padding=(4, 4), font=(ui_font, 9), relief="flat",
+            padding=(4, 4), font=(ui_font, 10), relief="flat",
         )
         style.map("Unpin.TButton", background=[("active", C_PANEL)])
         style.configure(
             "Link.TButton", background=C_BG, foreground=C_MUTED, bordercolor=C_BG,
             lightcolor=C_BG, darkcolor=C_BG, focuscolor=C_BG,
-            padding=(0, 2), font=(ui_font, 8), relief="flat",
+            padding=(0, 2), font=(mono_font, 8, "bold"), relief="flat",
         )
         style.map(
             "Link.TButton",
@@ -298,17 +409,18 @@ class ChasquiApp:
         )
         style.map("TScrollbar", background=[("active", C_BORDER)])
 
+        # The devices toggle, on a panel. Same shape as the BUFFER link below
+        # it because it does the same thing — clam's checkbutton draws a white
+        # indicator box that no amount of indicatorbackground would darken, and
+        # it was the one bright object in a black window.
         style.configure(
-            "Panel.TCheckbutton", background=C_PANEL, foreground=C_MUTED,
-            focuscolor=C_PANEL, font=(ui_font, 9), padding=(0, 2),
-            indicatorbackground=C_PANEL, indicatorforeground=C_ACCENT,
-            bordercolor=C_BORDER, lightcolor=C_PANEL, darkcolor=C_PANEL,
+            "PanelLink.TButton", background=C_PANEL, foreground=C_MUTED, bordercolor=C_PANEL,
+            lightcolor=C_PANEL, darkcolor=C_PANEL, focuscolor=C_PANEL,
+            padding=(0, 2), font=(mono_font, 8, "bold"), relief="flat",
         )
         style.map(
-            "Panel.TCheckbutton",
-            background=[("active", C_PANEL)],
-            foreground=[("active", C_TEXT)],
-            indicatorbackground=[("selected", C_PANEL), ("active", C_PANEL)],
+            "PanelLink.TButton",
+            background=[("active", C_PANEL)], foreground=[("active", C_TEXT)],
         )
 
         outer = ttk.Frame(root, padding=(12, 10, 12, 10))
@@ -321,30 +433,56 @@ class ChasquiApp:
         header.grid(row=0, column=0, sticky="ew")
         header.columnconfigure(1, weight=1)
 
-        ttk.Label(header, text="chasqui", style="Title.TLabel").grid(row=0, column=0, sticky="w")
+        brand = ttk.Frame(header)
+        brand.grid(row=0, column=0, sticky="w")
+        ttk.Label(brand, text="C H A S Q U I", style="Title.TLabel").grid(
+            row=0, column=0, sticky="w")
+        ttk.Label(brand, text="mensajero entre nodos", style="Tag.TLabel").grid(
+            row=1, column=0, sticky="w", pady=(1, 0))
 
         status = ttk.Frame(header)
         status.grid(row=0, column=2, sticky="e")
+
+        # A hexagon, not a dot. It matches the taskbar icon, and the ring around
+        # it means the indicator holds its place in the layout whatever the
+        # state — a bare filled shape on a dark background looks switched OFF
+        # when it is grey, which is exactly the state you most need to read.
+        # 19px, not the 11 a status dot usually gets: Tk's canvas does not
+        # antialias, so a small hexagon is a lumpy blob and reads as a circle.
+        # This is the size where the six sides survive being drawn with hard
+        # pixels — and the header has the room, because the wordmark below it
+        # is two lines tall.
         self.status_dot = self.tk.Canvas(
-            status, width=9, height=9, bg=C_BG, highlightthickness=0,
+            status, width=19, height=19, bg=C_BG, highlightthickness=0,
         )
-        self.status_dot.grid(row=0, column=0, padx=(0, 6))
-        self._dot = self.status_dot.create_oval(1, 1, 8, 8, fill=C_MUTED, outline="")
-        self.status_label = ttk.Label(status, text="Idle", style="Status.TLabel")
+        self.status_dot.grid(row=0, column=0, padx=(0, 7))
+        self.status_dot.create_polygon(
+            hex_points(9.5, 9.5, 8.6), fill="", outline=C_SOCKET)
+        self._dot = self.status_dot.create_polygon(
+            hex_points(9.5, 9.5, 5.4), fill=C_MUTED, outline="")
+        self.status_label = ttk.Label(status, text="LATENT", style="Status.TLabel")
         self.status_label.grid(row=0, column=1)
 
         # Floating over a call is the point of a gadget this size — without
         # this it disappears behind Meet the moment you click the meeting.
+        # Filled hexagon pinned, hollow unpinned: the same shape as the status
+        # light, so "held" reads as a property of the node rather than as a
+        # second unrelated icon.
         self.var_pin = self.tk.BooleanVar(value=True)
         self.btn_pin = ttk.Button(
-            status, text="📌", width=3, style="Pin.TButton", command=self._toggle_pin)
+            status, text="⬢", width=3, style="Pin.TButton", command=self._toggle_pin)
         self.btn_pin.grid(row=0, column=2, padx=(6, 0))
 
         # --- settings -----------------------------------------------
-        settings = ttk.Frame(outer, style="Panel.TFrame", padding=10)
-        settings.grid(row=1, column=0, sticky="ew", pady=(10, 0))
-        settings.columnconfigure(1, weight=1)
-        settings.columnconfigure(3, weight=1)
+        settings_wrap, settings = self._panel()
+        settings_wrap.grid(row=1, column=0, sticky="ew", pady=(10, 0))
+        # uniform: the two language pickers must be exactly the same width.
+        # Unequal boxes read as a hierarchy that isn't there — and the narrow
+        # one truncates first, so "Mandarin Chinese (zh)" became "Mandarin Chi"
+        # on the left while the right had room to spare.
+        settings.columnconfigure(0, weight=1, uniform="lang")
+        settings.columnconfigure(1, weight=0)
+        settings.columnconfigure(2, weight=1, uniform="lang")
 
         langs = _lang_choices()
         initial_adapter = (self.base_config.adapter
@@ -353,8 +491,6 @@ class ChasquiApp:
             self.base_config.source_lang, self.base_config.target_lang, initial_adapter)
         self.var_left = self.tk.StringVar(value=_lang_label(left))
         self.var_right = self.tk.StringVar(value=_lang_label(right))
-
-        settings.columnconfigure(2, weight=1)
 
         # Captions sit ABOVE the pickers and change with the mode: which box is
         # "yours" is the one thing a user must not have to guess.
@@ -384,7 +520,7 @@ class ChasquiApp:
         self.var_adapter.set(ADAPTER_LABELS[initial_adapter])
 
         # --- secondary settings (hidden until Details) -----------------
-        self.extras = ttk.Frame(outer, style="Panel.TFrame", padding=10)
+        self.extras_wrap, self.extras = self._panel()
         self.extras.columnconfigure(1, weight=1)
 
         ttk.Label(self.extras, text="Voice", style="PanelMuted.TLabel").grid(
@@ -396,13 +532,13 @@ class ChasquiApp:
         self.cmb_voice.grid(row=0, column=1, sticky="w")
 
         self.var_show_devices = self.tk.BooleanVar(value=False)
-        ttk.Checkbutton(
-            self.extras, text="Audio devices", variable=self.var_show_devices,
-            command=self._toggle_devices, style="Panel.TCheckbutton",
-        ).grid(row=0, column=2, sticky="e", padx=(8, 2))
+        self.btn_devices = ttk.Button(
+            self.extras, text="▸ AUDIO DEVICES", style="PanelLink.TButton",
+            command=self._toggle_devices)
+        self.btn_devices.grid(row=0, column=2, sticky="e", padx=(8, 0))
 
         # --- devices (collapsed) -------------------------------------
-        self.devices_frame = ttk.Frame(outer, style="Panel.TFrame", padding=10)
+        self.devices_wrap, self.devices_frame = self._panel()
         self.devices_frame.columnconfigure(1, weight=1)
         self.device_vars: dict[str, "object"] = {}
         self.device_widgets: dict[str, object] = {}
@@ -420,7 +556,7 @@ class ChasquiApp:
             # says what it is, the mode already greys out what it isn't.
 
         ttk.Button(
-            self.devices_frame, text="Refresh", style="Inset.TButton",
+            self.devices_frame, text="RESCAN", style="Inset.TButton",
             command=lambda: self._load_device_lists(force=True),
         ).grid(row=len(DEVICE_FIELDS), column=1, sticky="w", pady=(8, 0))
 
@@ -430,11 +566,11 @@ class ChasquiApp:
         actions.columnconfigure(0, weight=1)
 
         self.btn_start = ttk.Button(
-            actions, text="Start", style="Accent.TButton", command=self._on_start_stop)
+            actions, text="START", style="Accent.TButton", command=self._on_start_stop)
         self.btn_start.grid(row=0, column=0, sticky="ew")
 
         self.btn_check = ttk.Button(
-            actions, text="Check", style="Ghost.TButton", command=self._on_check)
+            actions, text="PING", style="Ghost.TButton", command=self._on_check)
         self.btn_check.grid(row=0, column=1, padx=(6, 0))
 
         # --- cost line (always visible — the reason to keep it in sight)
@@ -443,18 +579,21 @@ class ChasquiApp:
 
         self.var_details = self.tk.BooleanVar(value=False)
         self.btn_details = ttk.Button(
-            outer, text="▸ Details", style="Link.TButton", command=self._toggle_details)
+            outer, text="▸ BUFFER", style="Link.TButton", command=self._toggle_details)
         self.btn_details.grid(row=5, column=0, sticky="w", pady=(2, 0))
 
         # --- log (built always, shown only in Details) ------------------
         # Built up front so lines accumulate while hidden and are all there
         # the moment the user opens it to find out what went wrong.
-        self.log_wrap = self.tk.Frame(outer, bg=C_BORDER, bd=0, highlightthickness=0)
+        # The 1px frame around it is the ice, not the border grey: this is the
+        # one surface in the window that is genuinely a console, and the hairline
+        # is what says so without spending any height on a heading.
+        self.log_wrap = self.tk.Frame(outer, bg=C_SPINE, bd=0, highlightthickness=0)
 
         self.log = self.tk.Text(
-            self.log_wrap, bg=C_PANEL, fg=C_TEXT, insertbackground=C_TEXT, font=self.mono,
+            self.log_wrap, bg=C_PANEL, fg=C_TEXT, insertbackground=C_ACCENT, font=self.mono,
             wrap="word", relief="flat", padx=8, pady=8, height=10, width=1,
-            state="disabled", selectbackground=C_ACCENT,
+            state="disabled", selectbackground=C_ACCENT, selectforeground=C_ON_ACCENT,
         )
         scroll = ttk.Scrollbar(self.log_wrap, command=self.log.yview)
         self.log.configure(yscrollcommand=scroll.set)
@@ -464,25 +603,23 @@ class ChasquiApp:
         for level, color in LEVEL_COLORS.items():
             self.log.tag_configure(level, foreground=color)
         self.log.tag_configure("src", foreground=C_MUTED)
-        self.log.tag_configure("out", foreground=C_TEXT, font=(mono_font, 10, "bold"))
+        self.log.tag_configure("out", foreground=C_ACCENT, font=(mono_font, 10, "bold"))
         self.log.tag_configure("in", foreground=C_IN, font=(mono_font, 10, "bold"))
         self.log.tag_configure("meta", foreground=C_MUTED, font=(mono_font, 7))
 
         self.btn_clear = ttk.Button(
-            outer, text="Clear log", style="Ghost.TButton", command=self._clear_log)
+            outer, text="FLUSH", style="Ghost.TButton", command=self._clear_log)
 
         self.footer_meta = ttk.Label(outer, text="", style="Muted.TLabel")
         self._update_footer()
         self._apply_size()
 
         source = self.config_path or find_config()
+        self._log("chasqui · node online", ACCENT)
         self._log(f"Config: {source or 'built-in defaults (no chasqui.yaml found)'}", INFO)
         self._log(self._rate_line(), INFO)
         if not self.base_config.api_key:
-            self._log(
-                "No API key. Set OPENAI_API_KEY, or api.key in chasqui.yaml, then reopen.",
-                ERROR,
-            )
+            self._log(NO_API_KEY, ERROR)
 
     # ------------------------------------------------------------------
     # Settings persistence
@@ -584,8 +721,10 @@ class ChasquiApp:
         adapter = self._adapter_name()
 
         left_role, right_role = LANG_ROLES.get(adapter, DEFAULT_ROLES)
-        self.lbl_source_role.configure(text=left_role)
-        self.lbl_target_role.configure(text=right_role)
+        # Upper-cased here, not in LANG_ROLES: the table is the meaning, this is
+        # the skin. Anything else reading those strings gets them in prose.
+        self.lbl_source_role.configure(text=left_role.upper())
+        self.lbl_target_role.configure(text=right_role.upper())
         if adapter in BIDIRECTIONAL:
             arrow = "⇄"
         else:
@@ -602,7 +741,15 @@ class ChasquiApp:
         pinned = not self.var_pin.get()
         self.var_pin.set(pinned)
         self.root.attributes("-topmost", pinned)
-        self.btn_pin.configure(style="Pin.TButton" if pinned else "Unpin.TButton")
+        self._paint_pin()
+
+    def _paint_pin(self) -> None:
+        """Filled hexagon held on top, hollow one let go."""
+        pinned = self.var_pin.get()
+        self.btn_pin.configure(
+            text="⬢" if pinned else "⬡",
+            style="Pin.TButton" if pinned else "Unpin.TButton",
+        )
 
     def _toggle_details(self) -> None:
         self.var_details.set(not self.var_details.get())
@@ -616,34 +763,58 @@ class ChasquiApp:
         """
         details = self.var_details.get()
         self.root.attributes("-topmost", self.var_pin.get())
-        self.btn_pin.configure(
-            style="Pin.TButton" if self.var_pin.get() else "Unpin.TButton")
+        self._paint_pin()
 
         if details:
-            self.extras.grid(row=6, column=0, sticky="ew", pady=(8, 0))
-            self._toggle_devices()
+            self.extras_wrap.grid(row=6, column=0, sticky="ew", pady=(8, 0))
             self.log_wrap.grid(row=8, column=0, sticky="nsew", pady=(8, 0))
             self.btn_clear.grid(row=9, column=0, sticky="w", pady=(6, 0))
             self.footer_meta.grid(row=10, column=0, sticky="w", pady=(6, 0))
             self.outer.rowconfigure(8, weight=1)
-            self.btn_details.configure(text="▾ Details")
-            self.root.minsize(340, 520)
-            self.root.geometry("400x620")
+            self.btn_details.configure(text="▾ BUFFER")
         else:
-            for widget in (self.extras, self.devices_frame, self.log_wrap,
+            for widget in (self.extras_wrap, self.devices_wrap, self.log_wrap,
                            self.btn_clear, self.footer_meta):
                 widget.grid_remove()
             self.outer.rowconfigure(8, weight=0)
-            self.btn_details.configure(text="▸ Details")
-            self.root.minsize(340, 260)
-            self.root.geometry("400x272")
+            self.btn_details.configure(text="▸ BUFFER")
 
-    def _toggle_devices(self) -> None:
+        self._grid_devices()
+        self._resize()
+
+    def _grid_devices(self) -> None:
+        self.btn_devices.configure(
+            text="▾ AUDIO DEVICES" if self.var_show_devices.get() else "▸ AUDIO DEVICES")
         if self.var_show_devices.get() and self.var_details.get():
-            self.devices_frame.grid(row=7, column=0, sticky="ew", pady=(8, 0))
+            self.devices_wrap.grid(row=7, column=0, sticky="ew", pady=(8, 0))
             self._load_device_lists()
         else:
-            self.devices_frame.grid_remove()
+            self.devices_wrap.grid_remove()
+
+    def _resize(self) -> None:
+        """Height follows what is actually on screen.
+
+        The device panel is ~190px of combo boxes. Without making room for it
+        the log — the thing you opened Details to read — collapsed to a single
+        visible line.
+        """
+        # +16 on every height over the old numbers: the wordmark grew a second
+        # line for the tagline, and without the room the cost line was the thing
+        # that got clipped.
+        if not self.var_details.get():
+            self.root.minsize(340, 276)
+            self.root.geometry("400x288")
+            return
+        devices = self.var_show_devices.get()
+        self.root.minsize(340, 536)
+        self.root.geometry("400x816" if devices else "400x636")
+
+    def _toggle_devices(self) -> None:
+        # The button owns the flip now — a Checkbutton used to do it before the
+        # command fired, and dropping this line silently froze the panel shut.
+        self.var_show_devices.set(not self.var_show_devices.get())
+        self._grid_devices()
+        self._resize()
 
     def _load_device_lists(self, force: bool = False) -> None:
         if self._devices_loaded and not force:
@@ -677,8 +848,8 @@ class ChasquiApp:
         self._save_settings()
         try:
             self.runner.start(self._build_config())
-        except ValueError as e:            # missing API key
-            self._log(str(e), ERROR)
+        except ValueError:                 # missing API key
+            self._log(NO_API_KEY, ERROR)
             self._set_state("error")
         except Exception as e:
             self._log(f"Could not start: {e}", ERROR)
@@ -690,7 +861,7 @@ class ChasquiApp:
         self._save_settings()
         cfg = self._build_config()
         self._log("")
-        self._log(f"Check — {cfg.source_lang} → {cfg.target_lang} via {cfg.model}", ACCENT)
+        self._log(f"Ping — {cfg.source_lang} → {cfg.target_lang} via {cfg.model}", ACCENT)
         try:
             self.runner.start_check(cfg)
             self._set_state("checking")
@@ -702,6 +873,7 @@ class ChasquiApp:
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")
         self.log.configure(state="disabled")
+        self._last_log_line = ""   # nothing on screen, so nothing to repeat
 
     def _on_close(self) -> None:
         if not self.runner.is_running:
@@ -767,13 +939,13 @@ class ChasquiApp:
 
     def _set_state(self, state: str) -> None:
         self.state = state
-        color, text = STATE_COLORS.get(state, (C_MUTED, state.title()))
+        color, text = STATE_COLORS.get(state, (C_MUTED, state.upper()))
         self.status_dot.itemconfigure(self._dot, fill=color)
         self.status_label.configure(text=text, foreground=color)
 
         running = state in ("running", "starting", "stopping")
         self.btn_start.configure(
-            text="Stop" if running else "Start",
+            text="STOP" if running else "START",
             style="Stop.TButton" if running else "Accent.TButton",
             state="disabled" if state in ("stopping", "checking") else "normal",
         )
@@ -794,6 +966,12 @@ class ChasquiApp:
     # ------------------------------------------------------------------
 
     def _log(self, text: str, level: str = INFO) -> None:
+        # Never say the same thing twice in a row. Pressing Start with no API
+        # key printed the warning that was already the last line on screen.
+        if text and text == self._last_log_line:
+            return
+        self._last_log_line = text
+
         at_bottom = self.log.yview()[1] > 0.99
         self.log.configure(state="normal")
         self.log.insert("end", text + "\n", level)
@@ -880,7 +1058,7 @@ class ChasquiApp:
 
     def _update_footer(self) -> None:
         # The cost line stays visible in gadget mode; the rest is detail.
-        self.footer.configure(text=self._cost_text() or "No session yet")
+        self.footer.configure(text=self._cost_text() or "no traffic yet")
         average = self.latency_total / self.turns if self.turns else 0.0
         self.footer_meta.configure(
             text=f"{self.base_config.model}   ·   {self.turns} turns   ·   avg {average:.0f}ms")
