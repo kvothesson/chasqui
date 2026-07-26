@@ -236,6 +236,18 @@ def ui(config_path):
     sys.exit(launch(config_path=config_path))
 
 
+def ui_entry() -> None:
+    """Windowed entry point — the `chasqui-ui` command.
+
+    Registered under [project.gui-scripts], which builds a launcher with the
+    GUI subsystem flag set, so Windows opens no console behind the window.
+    `chasqui ui` is a console script and always drags a black console along;
+    that is fine from a terminal and wrong from a shortcut or a Run box.
+    """
+    from .ui.app import launch
+    sys.exit(launch())
+
+
 @cli.command()
 @click.option("--out", "out_path", default=None, metavar="PATH",
               help="Where to write the .ico (default: ~/.chasqui/chasqui.ico)")
@@ -261,19 +273,21 @@ def icon(out_path, shortcut):
         click.echo("--shortcut only works on Windows.", err=True)
         sys.exit(1)
 
-    # pythonw.exe, not the chasqui.exe console script: launching a console
-    # entry point from the desktop parks a black console window behind the
-    # gadget for as long as it runs.
-    target = Path(sys.executable).with_name("pythonw.exe")
-    arguments = "-m chasqui ui"
-    if not target.exists():
-        import shutil
-        found = shutil.which("chasqui")
-        if not found:
-            click.echo(f"Error: found neither pythonw.exe next to {sys.executable} "
-                       "nor a chasqui command on PATH.", err=True)
+    # Never the chasqui.exe console script: launching a console entry point
+    # from the desktop parks a black console window behind the gadget for as
+    # long as it runs. chasqui-ui.exe is built windowed; pythonw is the
+    # fallback for an install that predates it.
+    import shutil
+    windowed = shutil.which("chasqui-ui")
+    if windowed:
+        target, arguments = Path(windowed), ""
+    else:
+        target = Path(sys.executable).with_name("pythonw.exe")
+        arguments = "-m chasqui ui"
+        if not target.exists():
+            click.echo("Error: found neither chasqui-ui on PATH nor pythonw.exe "
+                       f"next to {sys.executable}.", err=True)
             sys.exit(1)
-        target, arguments = Path(found), "ui"
 
     import subprocess
     script = f"""

@@ -43,6 +43,12 @@ Issues = "https://github.com/kvothesson/chasqui/issues"
 [project.scripts]
 chasqui = "chasqui.cli:cli"
 
+# Windowed launcher: no console window behind the UI. Console scripts always
+# open one on Windows, which is right for a terminal and wrong for a desktop
+# shortcut. `chasqui ui` still works — this is the shortcut-friendly door.
+[project.gui-scripts]
+chasqui-ui = "chasqui.cli:ui_entry"
+
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "black", "ruff"]
 
