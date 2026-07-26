@@ -61,6 +61,31 @@ stack:
 Transcripts reach the UI through `BaseAdapter.on_turn(event, direction)`, not by
 parsing the printed log.
 
+### Skin
+
+Dark, blue-cast night with one ice accent (`C_ACCENT = #5ec5e2`, "the cold road
+the chasqui runs"), amber for warnings and violet for inbound turns. Mono is the
+machine's voice — wordmark, state, buttons, captions; the proportional face is
+for what the user picked, above all device names.
+
+Things that are the way they are for a reason:
+
+- **The hexagon is shared.** `hex_points()` in `app.py` and `_in_hexagon()` in
+  `icon.py` draw the same silhouette; the status light, the pin glyph (⬢/⬡) and
+  the taskbar tile are meant to read as one object. `icon.py > SMALL_ARROW_*` is
+  fitted to the hexagon's half-width — `test_arrows_stay_inside_the_hexagon`
+  fails if a vertex drifts outside and would be sliced flat.
+- **Bump `ICON_VERSION` when the artwork changes**, or every existing user keeps
+  the cached `.ico` forever.
+- **`ttk.Checkbutton` is not usable here.** Clam draws a white indicator box
+  that `indicatorbackground` does not darken; the devices toggle is a
+  `PanelLink.TButton` that flips its own `BooleanVar` in `_toggle_devices`.
+- **The dark title bar is a DWM call** (`_dark_titlebar`), not a Tk option, and
+  it only takes after `update_idletasks()` has given the window a real HWND.
+- **Panels are wrappers.** `_panel()` returns `(wrapper, inner)` — grid the
+  wrapper (`extras_wrap`, `devices_wrap`), fill the inner. Gridding the inner
+  frame directly puts it in the wrong parent and it silently never appears.
+
 ---
 
 ## Setup
@@ -196,6 +221,12 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   warning — you just get the wrong picture (verified on Tk 8.6.15, Windows).
   `ui/app.py > _apply_icon` picks exactly one: the `.ico` on Windows, the
   in-memory PhotoImage elsewhere.
+- **`chasqui ui` is a console script and always opens a console** when launched
+  by double-click (measured: 1 new `ConsoleWindowClass` window; from a terminal
+  it reuses that one, which is why it looks fine in development). The windowed
+  door is `chasqui-ui`, declared under `[project.gui-scripts]` — that is what
+  the desktop shortcut points at. Removing that block silently brings the
+  console back for every shortcut user.
 - **`pythonw.exe` has no `sys.stdout` or `sys.stderr` at all** (the desktop
   shortcut launches the UI through it so no console tags along). Anything that
   touches a stream attribute at import time must guard for `None` — the

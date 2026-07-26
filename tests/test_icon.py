@@ -11,8 +11,15 @@ import struct
 import pytest
 
 from chasqui.ui.icon import (
+    ARROW_LEFT,
+    ARROW_RIGHT,
+    GLYPH,
     ICO_SIZES,
+    SMALL_ARROW_LEFT,
+    SMALL_ARROW_RIGHT,
     SMALL_SIZE,
+    TILE,
+    _in_hexagon,
     arrows_for,
     encode_ico,
     encode_png,
@@ -39,6 +46,42 @@ def test_corners_are_transparent_and_centre_is_not():
     assert alpha(0, 0) == 0, "top-left corner must be fully transparent"
     assert alpha(size - 1, size - 1) == 0, "bottom-right corner must be transparent"
     assert alpha(size // 2, size // 2) == 255, "the middle of the tile must be opaque"
+
+
+def test_tile_is_a_hexagon_not_a_square():
+    """The silhouette is the mark.
+
+    Measured where the two shapes disagree: a hexagon is solid all the way out
+    to the middle of its left edge, and empty a tenth of the way in from a
+    corner where a rounded square is still solid.
+    """
+    size = 64
+    rgba = render_rgba(size)
+
+    def alpha(fx, fy):
+        return rgba[(int(fy * size) * size + int(fx * size)) * 4 + 3]
+
+    assert alpha(0.02, 0.50) > 200, "the left vertex must be solid — a hexagon is widest at its waist"
+    assert alpha(0.50, 0.02) > 200, "the flat top edge must be solid"
+    assert alpha(0.10, 0.10) == 0, (
+        "a hexagon has no corner there. If that pixel is opaque the tile went "
+        "back to being a rounded square — check _in_hexagon()."
+    )
+
+
+def test_arrows_stay_inside_the_hexagon():
+    """Every arrow vertex, both geometries.
+
+    On the old square tile the arrows had corners to grow into; on a hexagon a
+    vertex that overhangs is sliced off flat by the tile edge, and a beheaded
+    arrow stops reading as a direction. The 16px pair is the one at risk — it
+    is the widest, at the height where the hexagon is still narrowing.
+    """
+    for arrow in (ARROW_RIGHT, ARROW_LEFT, SMALL_ARROW_RIGHT, SMALL_ARROW_LEFT):
+        for x, y in arrow:
+            assert _in_hexagon(x, y), (
+                f"vertex ({x}, {y}) falls outside the tile and will be clipped"
+            )
 
 
 def test_png_is_a_png():
@@ -76,8 +119,8 @@ def test_256_is_encoded_as_zero():
 
 
 def test_small_sizes_get_their_own_geometry():
-    """The first version reused one glyph everywhere and turned into a pink
-    smudge in the taskbar: at 16px its shafts were under two pixels tall."""
+    """The first version reused one glyph everywhere and turned into a smudge
+    in the taskbar: at 16px its shafts were under two pixels tall."""
     assert arrows_for(16) != arrows_for(64), (
         "Sizes below SMALL_SIZE need the fatter geometry. If this fails, the "
         "taskbar icon is a blob again — check arrows_for()."
@@ -85,25 +128,116 @@ def test_small_sizes_get_their_own_geometry():
     assert arrows_for(SMALL_SIZE) == arrows_for(256)
 
 
+def _near(pixel, colour, tolerance=45):
+    return all(abs(pixel[i] - colour[i]) <= tolerance for i in range(3))
+
+
 def test_glyph_survives_at_16px():
-    """Measure it rather than trust it: the middle column of the tile must
-    contain both near-white glyph pixels and near-accent background."""
+    """Measure it rather than trust it.
+
+    16px is where an icon quietly stops working: down the middle of the tile
+    there must be dark glyph pixels AND ice tile left around them. The first
+    version failed exactly here — its arrows antialiased into a smudge at the
+    one size the taskbar actually uses.
+    """
     size = 16
     rgba = render_rgba(size, samples=4)
     column = size // 2
-    whites = darks = 0
+    glyph = tile = 0
     for y in range(size):
-        r, g, b, a = rgba[(y * size + column) * 4: (y * size + column) * 4 + 4]
-        if a > 200 and r > 235 and g > 235 and b > 235:
-            whites += 1
-        elif a > 200 and r > 150 and g < 160:
-            darks += 1
-    assert whites >= 2, (
-        f"only {whites} clearly white pixels down the middle at 16px — the "
-        "arrows have washed out into the background and the taskbar shows a "
-        "blob. Thicken SMALL_ARROW_*."
+        start = (y * size + column) * 4
+        pixel = rgba[start:start + 4]
+        if pixel[3] < 200:
+            continue
+        if _near(pixel, GLYPH):
+            glyph += 1
+        elif _near(pixel, TILE):
+            tile += 1
+
+    assert glyph >= 2, (
+        f"only {glyph} arrow pixels down the middle at 16px — the glyph "
+        "washed out and the taskbar shows a blob. Thicken SMALL_ARROW_* or "
+        "raise the contrast against TILE."
     )
-    assert darks >= 2, "the tile must still read as a coloured tile, not a white bar"
+    assert tile >= 2, (
+        "no tile colour left between the arrows — they merged into one block "
+        "and stopped reading as two directions."
+    )
+
+
+def _relative_luminance(colour):
+    channels = []
+    for value in colour:
+        value /= 255
+        channels.append(value / 12.92 if value <= 0.03928
+                        else ((value + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+
+def contrast_ratio(first, second) -> float:
+    high, low = sorted((_relative_luminance(first), _relative_luminance(second)), reverse=True)
+    return (high + 0.05) / (low + 0.05)
+
+
+def test_arrows_meet_the_contrast_floor_against_the_tile():
+    """The arrows are cut out of the tile, so their legibility is entirely a
+    contrast question — and at 16px there is no detail left to compensate.
+
+    3:1 is WCAG's floor for a graphical object. White arrows on this ice
+    measure 2.0:1 and turn to mush in the taskbar; that is why they are not
+    white, however nice they look at 256px.
+    """
+    ratio = contrast_ratio(TILE, GLYPH)
+    assert ratio >= 3.0, (
+        f"arrows on tile measure {ratio:.1f}:1, under the 3:1 floor for a "
+        "graphical object. Whatever it looks like at 256px, it will be a "
+        "coloured smudge at the size the taskbar uses."
+    )
+
+
+def test_tile_separates_from_a_dark_taskbar():
+    """A tile as dark as the taskbar has no silhouette: the arrows float and
+    the icon disappears. Checked against Windows' near-black #1c1c1c."""
+    taskbar = 0x1C
+    distance = sum(abs(channel - taskbar) for channel in TILE)
+    assert distance > 60, (
+        f"TILE {TILE} is too close to a dark taskbar background — the icon "
+        "loses its outline there. Lighten it or give it a border."
+    )
+
+
+def test_stale_icon_is_rewritten_when_the_art_changes(tmp_path):
+    """The cached .ico lives at a fixed path so shortcuts keep working — which
+    means a redesign has to invalidate it explicitly, or every existing user
+    keeps the old icon forever."""
+    from chasqui.ui.icon import ICON_VERSION, _version_marker, ensure_ico
+
+    target = tmp_path / "chasqui.ico"
+    ensure_ico(target)
+    marker = _version_marker(target)
+    assert marker.read_text(encoding="utf-8").strip() == str(ICON_VERSION)
+
+    target.write_bytes(b"stale")
+    marker.write_text("1", encoding="utf-8")
+    ensure_ico(target)
+
+    assert target.read_bytes() != b"stale", (
+        "An icon cached under an older version must be regenerated. If this "
+        "fails, bumping ICON_VERSION does nothing and the redesign never "
+        "reaches anyone who already ran chasqui."
+    )
+
+
+def test_ensure_ico_leaves_a_current_icon_alone(tmp_path):
+    from chasqui.ui.icon import ensure_ico
+
+    target = tmp_path / "chasqui.ico"
+    ensure_ico(target)
+    stamp = target.stat().st_mtime_ns
+    ensure_ico(target)
+    assert target.stat().st_mtime_ns == stamp, (
+        "Rewriting the icon on every launch is wasted work at startup."
+    )
 
 
 def test_write_ico_creates_parent_directories(tmp_path):
