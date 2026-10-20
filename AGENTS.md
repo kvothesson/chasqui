@@ -237,9 +237,12 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   early return there, every later print in the process disappears into a dead
   queue. It tees to the previous stdout, not `sys.__stdout__` — the raw one
   still dies on Japanese.
-- **`chasqui` is taken on PyPI** by an unrelated project, so this package is not
-  installable by that name. Pick a distribution name before the first release;
-  the import package and the `chasqui` console script can stay as they are.
+- **The distribution is `chasqui-translate`, not `chasqui`** — that name is
+  taken on PyPI by an unrelated project. The import package and the `chasqui`
+  console script keep the short name. Anything that looks the package up by
+  distribution name (`click.version_option(package_name=...)`,
+  `importlib.metadata`) must use `chasqui-translate`, or `chasqui --version`
+  crashes with PackageNotFoundError.
 - **AudioDeviceCmdlets params are `-Recording` / `-Playback`** (they return the
   *default* device of that type). `-RecordingDefault` does not exist — it fails with
   AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a
