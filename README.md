@@ -5,10 +5,10 @@
 
 Real-time simultaneous translation. Speak your language. Be understood.
 
-*[Leer en español →](README.es.md)*
+*[Leer en español →](https://github.com/kvothesson/chasqui/blob/master/README.es.md)*
 
 <p align="center">
-  <img src="docs/img/ui-gadget.png" alt="The chasqui window: two language pickers, a mode, and Start" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="The chasqui window: two language pickers, a mode, and Start" width="402">
 </p>
 
 ---
@@ -133,7 +133,7 @@ Click **▸ BUFFER** and the window grows into the second shape: the voice picke
 the audio devices, and the log.
 
 <p align="center">
-  <img src="docs/img/ui-transcript.png" alt="The expanded window with a live transcript" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png" alt="The expanded window with a live transcript" width="402">
 </p>
 
 The log is where the conversation lands as it happens. Each turn shows the
@@ -152,7 +152,7 @@ Devices stay on **Auto**, and Auto is right almost always. Open
 **▸ AUDIO DEVICES** only when autodetection picks the wrong cable.
 
 <p align="center">
-  <img src="docs/img/ui-devices.png" alt="The audio devices panel, four pickers on Auto" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-devices.png" alt="The audio devices panel, four pickers on Auto" width="402">
 </p>
 
 Each field names both ends of the wire, and the pickers you do not need in the
@@ -222,7 +222,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-See [SPEC.md](SPEC.md) for full architecture and [AGENTS.md](AGENTS.md) for contributor/agent notes.
+See [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) for full architecture and [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md) for contributor/agent notes.
 
 ## License
 

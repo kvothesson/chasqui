@@ -5,10 +5,10 @@
 
 Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 
-*[Read in English →](README.md)*
+*[Read in English →](https://github.com/kvothesson/chasqui/blob/master/README.md)*
 
 <p align="center">
-  <img src="docs/img/ui-gadget.png" alt="La ventana de chasqui: dos idiomas, un modo, y Start" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="La ventana de chasqui: dos idiomas, un modo, y Start" width="402">
 </p>
 
 ---
@@ -137,7 +137,7 @@ Tocá **▸ BUFFER** y la ventana crece a la segunda forma: el selector de voz,
 los dispositivos de audio y el log.
 
 <p align="center">
-  <img src="docs/img/ui-transcript.png" alt="La ventana expandida con una transcripción en vivo" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png" alt="La ventana expandida con una transcripción en vivo" width="402">
 </p>
 
 El log es donde va cayendo la conversación mientras pasa. Cada turno muestra la
@@ -158,7 +158,7 @@ Los dispositivos quedan en **Auto**, y Auto acierta casi siempre. Abrí
 equivocado.
 
 <p align="center">
-  <img src="docs/img/ui-devices.png" alt="El panel de dispositivos, cuatro selectores en Auto" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-devices.png" alt="El panel de dispositivos, cuatro selectores en Auto" width="402">
 </p>
 
 Cada campo nombra las dos puntas del cable, y los selectores que no hacen falta
@@ -230,7 +230,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-En [SPEC.md](SPEC.md) está la arquitectura completa y en [AGENTS.md](AGENTS.md)
+En [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) está la arquitectura completa y en [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md)
 las notas para quien contribuya.
 
 ## Licencia
