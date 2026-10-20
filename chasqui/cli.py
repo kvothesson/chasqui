@@ -58,7 +58,7 @@ def _run_adapter(cfg: Config) -> None:
 # ---------------------------------------------------------------------------
 
 @click.group()
-@click.version_option(package_name="chasqui")
+@click.version_option(package_name="chasqui-translate")
 def cli():
     """Chasqui — Real-time simultaneous translation.
 

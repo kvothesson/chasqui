@@ -19,8 +19,9 @@ Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 que meten audio traducido dentro de otra app,
 [VB-Audio Cable](https://vb-audio.com/Cable/) en Windows.
 
-Todavía no está en PyPI (ese nombre lo tiene otro proyecto sin relación), así
-que se instala desde el código:
+El paquete se llama `chasqui-translate` (`chasqui` a secas lo tiene en PyPI
+otro proyecto sin relación). Todavía no está publicado, así que se instala
+desde el código:
 
 ```bash
 git clone https://github.com/kvothesson/chasqui && cd chasqui
