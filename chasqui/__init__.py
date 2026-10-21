@@ -1,6 +1,6 @@
 """Chasqui — Real-time simultaneous translation."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .core.config import Config
 from .core.pipeline import Pipeline, TranslationEvent

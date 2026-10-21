@@ -6,6 +6,8 @@ What changed for people who use chasqui. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-21
+
 ### Added
 
 - **Windows installer** (`chasqui-setup-<version>.exe`): no Python needed,
@@ -55,5 +57,6 @@ The commands are still `chasqui` and `chasqui-ui`.
 - `chasqui check` (round trip without audio hardware), `chasqui devices`,
   `chasqui langs`, `chasqui translate`, `chasqui init`.
 
-[Unreleased]: https://github.com/kvothesson/chasqui/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/kvothesson/chasqui/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/kvothesson/chasqui/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/kvothesson/chasqui/releases/tag/v0.2.0
