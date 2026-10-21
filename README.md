@@ -306,6 +306,11 @@ and the AudioDeviceCmdlets module inside, and, if
 `dist/chasqui-setup-<version>.exe`: a per-user installer, no admin prompt.
 Build from a clean virtualenv; PyInstaller packs whatever it can import.
 
+Releases do not need a local build: publishing a GitHub release runs
+`.github/workflows/windows.yml`, which builds the installer on a clean runner
+and attaches it to the release. Run it by hand (Actions → Windows installer →
+Run workflow) to get a test build as a run artifact.
+
 See [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) for full architecture and [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md) for contributor/agent notes.
 
 ## License

@@ -283,6 +283,12 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a
   silent no-op for weeks. Default-device switching lives in `core/windevice.py`; use
   it instead of inlining PowerShell.
+- **The release installer is built by CI, not by hand** (`.github/workflows/windows.yml`,
+  on release published). SignPath Foundation signing requires that, so do not
+  attach a locally built `.exe` to a release. On the runner AudioDeviceCmdlets
+  is installed `-Scope AllUsers`: the build step runs under pwsh 7, whose
+  PSModulePath leaks into the `powershell` 5.1 that `build_windows.py` spawns
+  and hides the CurrentUser module folder (first CI run failed on exactly that).
 
 ---
 
