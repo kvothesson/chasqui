@@ -15,6 +15,21 @@ Real-time simultaneous translation. Speak your language. Be understood.
 
 ## Install
 
+### Windows: the installer
+
+**[Download chasqui-setup-0.2.0.exe](https://github.com/kvothesson/chasqui/releases/download/v0.2.0/chasqui-setup-0.2.0.exe)** (27 MB, Windows 10/11, 64-bit).
+
+No Python, no admin prompt. It installs for your user, adds a Start menu entry,
+and opens chasqui, which walks you through the API key on its first run (see
+[First run](#first-run-the-setup-window)). For calls you also need
+[VB-Audio Cable](https://vb-audio.com/Cable/); the setup window tells you if it
+is missing.
+
+The installer is not code-signed yet, so Windows SmartScreen will say
+"Windows protected your PC". Click **More info**, then **Run anyway**.
+
+### With Python
+
 **You need:** Python 3.11+, an OpenAI API key, and — for the modes that put
 translated audio into another app — [VB-Audio Cable](https://vb-audio.com/Cable/)
 on Windows.
