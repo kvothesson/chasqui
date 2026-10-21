@@ -13,6 +13,7 @@ from typing import Callable, Optional
 import websockets
 
 from .audio import AudioStream
+from .gate import SilenceGate, DEFAULT_HOLD_MS, DEFAULT_THRESHOLD_DBFS
 from .constants import LANG_NAMES, REALTIME_URL, REALTIME_TRANSLATE_URL
 from .pricing import Usage
 
@@ -62,6 +63,9 @@ class Pipeline:
         vad_threshold: float = 0.5,
         vad_silence_ms: int = 600,
         isolate_turns: bool = False,
+        silence_gate: bool = False,
+        gate_threshold_dbfs: float = DEFAULT_THRESHOLD_DBFS,
+        gate_hold_ms: int = DEFAULT_HOLD_MS,
     ):
         self.source_lang = source_lang
         self.target_lang = target_lang
@@ -72,6 +76,12 @@ class Pipeline:
         self.on_translation = on_translation
         self.vad_threshold = vad_threshold
         self.vad_silence_ms = vad_silence_ms
+        # Silence gate (core/gate.py): keep quiet audio off the wire, and off
+        # the bill. None = send everything, as before.
+        self.silence_gate = silence_gate
+        self.gate_threshold_dbfs = gate_threshold_dbfs
+        self.gate_hold_ms = gate_hold_ms
+        self.gate: Optional[SilenceGate] = None
         self._stop_event = threading.Event()
         self._is_translate_model = "translate" in model
         # Isolated turns (gpt-realtime only; the translate endpoint takes no
@@ -293,21 +303,27 @@ class Pipeline:
         )
         loop = asyncio.get_event_loop()
         sent = 0
+        # A fresh gate per connection: after a reconnect, start open-minded.
+        if self.silence_gate:
+            self.gate = SilenceGate(self.gate_threshold_dbfs, self.gate_hold_ms)
         while not self._stop_event.is_set():
             chunk = await loop.run_in_executor(None, input_stream.read)
             if not chunk:
                 await asyncio.sleep(0.01)
                 continue
-            await ws.send(json.dumps({
-                "type": event_type,
-                "audio": base64.b64encode(chunk).decode(),
-            }))
-            # The billable quantity for the translate endpoint: minutes of
-            # audio actually sent, not wall clock — a stalled mic costs nothing.
-            self.usage.audio_bytes_sent += len(chunk)
-            sent += 1
-            if self._debug and sent % 50 == 0:  # every ~5s of audio
-                print(f"  [debug] sent {sent} audio chunks", flush=True)
+            for out in (self.gate.feed(chunk) if self.gate else [chunk]):
+                await ws.send(json.dumps({
+                    "type": event_type,
+                    "audio": base64.b64encode(out).decode(),
+                }))
+                # The billable quantity for the translate endpoint: minutes of
+                # audio actually sent, not wall clock — a stalled mic costs
+                # nothing, and neither does what the gate held back.
+                self.usage.audio_bytes_sent += len(out)
+                sent += 1
+                if self._debug and sent % 50 == 0:  # every ~5s of audio
+                    skipped = self.gate.bytes_skipped // 48000 if self.gate else 0
+                    print(f"  [debug] sent {sent} audio chunks, gate skipped {skipped}s", flush=True)
 
     # Seconds of transcript inactivity after which accumulated text is flushed.
     # The translate endpoint streams continuously and never emits "done" events,

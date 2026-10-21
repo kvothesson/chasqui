@@ -75,6 +75,15 @@ class Config:
     vad_threshold: float = 0.5
     vad_silence_ms: int = 600
 
+    # Silence gate (core/gate.py): don't stream, or pay for, quiet audio.
+    silence_gate: bool = False
+    silence_gate_dbfs: float = -50.0
+    silence_gate_hold_ms: int = 1500
+
+    # Passthrough: your original voice mixed under the translation the other
+    # side hears, at this gain (0 = off, 0.15 is a good start).
+    passthrough: float = 0.0
+
     # ------------------------------------------------------------------
 
     @classmethod
@@ -102,6 +111,10 @@ class Config:
         cfg.voice = d.get("voice", cfg.voice)
         cfg.vad_threshold = d.get("vad_threshold", cfg.vad_threshold)
         cfg.vad_silence_ms = d.get("vad_silence_ms", cfg.vad_silence_ms)
+        cfg.silence_gate = d.get("silence_gate", cfg.silence_gate)
+        cfg.silence_gate_dbfs = d.get("silence_gate_dbfs", cfg.silence_gate_dbfs)
+        cfg.silence_gate_hold_ms = d.get("silence_gate_hold_ms", cfg.silence_gate_hold_ms)
+        cfg.passthrough = float(d.get("passthrough", cfg.passthrough) or 0.0)
 
         if dev := d.get("device"):
             cfg.device = DeviceConfig(

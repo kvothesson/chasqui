@@ -143,8 +143,8 @@ class HeadsetAdapter(BridgeAdapter):
         try:
             out_tuple = (
                 self._make_pipeline(),
-                MicStream(device=mic_device),
-                SpeakerStream(device=cable_input),
+                *self._with_passthrough(
+                    MicStream(device=mic_device), SpeakerStream(device=cable_input)),
             )
             in_tuple = None
             if in_capture:
