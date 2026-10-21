@@ -8,6 +8,11 @@ Real-time simultaneous translation. Speak your language. Be understood.
 **[kvothesson.com/chasqui](https://kvothesson.com/chasqui/)** · *[Leer en español →](https://github.com/kvothesson/chasqui/blob/master/README.es.md)*
 
 <p align="center">
+  <a href="https://youtu.be/LcFYSNgHg0Q"><img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/video-en.jpg" alt="Watch the one-minute video: chasqui, from the Andes to Tokyo" width="640"></a><br>
+  <sub>▶ <a href="https://youtu.be/LcFYSNgHg0Q">One-minute video</a>: the voices and subtitles are chasqui's real output, uncorrected · <a href="https://youtu.be/TB1ZZUPGsFo">español</a> · <a href="https://youtu.be/frBAmX91HHo">日本語</a></sub>
+</p>
+
+<p align="center">
   <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="The chasqui window: two language pickers, a mode, and Start" width="402">
 </p>
 

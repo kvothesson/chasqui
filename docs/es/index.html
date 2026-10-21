@@ -267,6 +267,28 @@
   section { padding: 48px 0; border-top: 1px solid var(--border); }
   h2 { font: 700 13px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin: 0 0 24px; }
 
+  /* The video loads nothing from YouTube until someone presses play: a local
+     thumbnail first, the youtube-nocookie player swapped in on click. */
+  .video {
+    position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  .video button { position: absolute; inset: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+  .video button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .video img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .video .play {
+    position: absolute; left: 50%; top: 50%; width: 76px; height: 66px; transform: translate(-50%, -50%);
+    background: var(--accent); clip-path: polygon(0 50%, 25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%);
+    transition: transform .15s;
+  }
+  .video .play::after {
+    content: ""; position: absolute; left: 33px; top: 21px;
+    border-left: 20px solid var(--on-accent); border-top: 12px solid transparent; border-bottom: 12px solid transparent;
+  }
+  .video button:hover .play { transform: translate(-50%, -50%) scale(1.08); }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .vnote { font: 13px var(--mono); color: var(--muted); margin: 12px 0 0; }
+
   .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .mode { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
   .mode h3 { margin: 0 0 4px; font: 700 16px var(--mono); color: var(--accent); letter-spacing: .06em; }
@@ -394,6 +416,22 @@
          width="402" height="668" fetchpriority="high">
   </div>
 </div>
+
+<section id="video">
+  <h2><span data-l="en">See it working</span><span data-l="es">Miralo funcionando</span></h2>
+  <div class="video" data-l="en">
+    <button type="button" data-yt="LcFYSNgHg0Q" aria-label="Play the one-minute video: chasqui, from the Andes to Tokyo">
+      <img src="../img/video-en.jpg" alt="" width="960" height="540" loading="lazy"><span class="play"></span>
+    </button>
+  </div>
+  <div class="video" data-l="es">
+    <button type="button" data-yt="TB1ZZUPGsFo" aria-label="Reproducir el video de un minuto: chasqui, de los Andes a Tokio">
+      <img src="../img/video-es.jpg" alt="" width="960" height="540" loading="lazy"><span class="play"></span>
+    </button>
+  </div>
+  <p class="vnote" data-l="en">The voices and subtitles are chasqui's real output, uncorrected. Also in <a href="https://youtu.be/TB1ZZUPGsFo" lang="es">español</a> · <a href="https://youtu.be/frBAmX91HHo" lang="ja">日本語</a> · <a href="https://youtu.be/vsdIe_2KCZw">as a Short</a></p>
+  <p class="vnote" data-l="es">Las voces y los subtítulos son la salida real de chasqui, sin corregir. También en <a href="https://youtu.be/LcFYSNgHg0Q" lang="en">English</a> · <a href="https://youtu.be/frBAmX91HHo" lang="ja">日本語</a> · <a href="https://youtu.be/M51gFEndVuU">como Short</a></p>
+</section>
 
 <section id="modes">
   <h2><span data-l="en">Three ways to use it</span><span data-l="es">Tres formas de usarlo</span></h2>
@@ -558,6 +596,16 @@
       try { localStorage.setItem("chasqui-lang", lang); } catch (e) {}
       if (auto && lang === "en") { ev.preventDefault(); setLang(lang); }
       else if (!auto && lang === "es") { ev.preventDefault(); }
+    });
+  });
+
+  document.querySelectorAll(".video button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var f = document.createElement("iframe");
+      f.src = "https://www.youtube-nocookie.com/embed/" + b.getAttribute("data-yt") + "?autoplay=1&rel=0";
+      f.title = b.getAttribute("aria-label");
+      f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+      b.replaceWith(f);
     });
   });
 
