@@ -297,19 +297,24 @@ def icon(out_path, shortcut):
                        f"next to {sys.executable}.", err=True)
             sys.exit(1)
 
+    import os
     import subprocess
-    script = f"""
+    # Paths go in as environment variables, not into the script text: a
+    # profile folder like C:\Users\O'Brien would close the '...' string.
+    script = """
 $s = (New-Object -ComObject WScript.Shell).CreateShortcut(
     [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'chasqui.lnk'))
-$s.TargetPath = '{target}'
-$s.Arguments = '{arguments}'
-$s.IconLocation = '{written}'
+$s.TargetPath = $env:CHASQUI_LNK_TARGET
+$s.Arguments = $env:CHASQUI_LNK_ARGS
+$s.IconLocation = $env:CHASQUI_LNK_ICON
 $s.Description = 'chasqui — real-time simultaneous translation'
 $s.Save()
 """
     result = subprocess.run(
         ["powershell", "-NoProfile", "-Command", script],
         capture_output=True, encoding="utf-8", errors="replace",
+        env={**os.environ, "CHASQUI_LNK_TARGET": str(target),
+             "CHASQUI_LNK_ARGS": arguments, "CHASQUI_LNK_ICON": str(written)},
     )
     if result.returncode != 0:
         click.echo(f"Error creating the shortcut: {result.stderr.strip()}", err=True)

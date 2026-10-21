@@ -1,5 +1,6 @@
 """Windows default audio device switcher via PowerShell AudioDeviceCmdlets."""
 
+import os
 import sys
 import subprocess
 from pathlib import Path
@@ -66,10 +67,16 @@ else:
 
     def _set_default(device_type: str, name_hint: str) -> bool:
         # Find the device index whose name contains name_hint, then set it.
-        name_hint = name_hint.replace("'", "''")
+        # The name travels as an environment variable, never inside the
+        # script: device names are chosen by drivers and users, and
+        # PowerShell closes a '...' string on ’ ‘ ‚ ‛ too ("Juan’s AirPods"),
+        # so escaping only ' broke the script and let a name run code.
+        # IndexOf, not -like: -like reads [ ] in "Speakers [Realtek]" as a
+        # character class and never matches.
         script = _import() + f"""
 $dev = Get-AudioDevice -List | Where-Object {{
-    $_.Type -eq '{device_type}' -and $_.Name -like '*{name_hint}*'
+    $_.Type -eq '{device_type}' -and
+    $_.Name.IndexOf($env:CHASQUI_DEVICE_HINT, [StringComparison]::OrdinalIgnoreCase) -ge 0
 }} | Select-Object -First 1
 if ($dev) {{ Set-AudioDevice -Index $dev.Index | Out-Null; exit 0 }}
 exit 1
@@ -78,6 +85,7 @@ exit 1
             r = subprocess.run(
                 ["powershell", "-NoProfile", "-Command", script],
                 capture_output=True, timeout=8, creationflags=_NO_WINDOW,
+                env={**os.environ, "CHASQUI_DEVICE_HINT": name_hint},
             )
             return r.returncode == 0
         except Exception:
