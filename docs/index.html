@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chasqui · real-time voice translation</title>
+<meta name="description" content="Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, $0.034 a minute.">
+<meta property="og:title" content="chasqui · real-time voice translation">
+<meta property="og:description" content="Speak your language. Hear theirs in yours. Calls in any app, YouTube, streams. pip install chasqui-translate.">
+<meta property="og:image" content="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png">
+<meta name="theme-color" content="#0b0e14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='0,50 25,6 75,6 100,50 75,94 25,94' fill='%235ec5e2'/%3E%3C/svg%3E">
+<style>
+  /* The app's palette, same names as chasqui/ui/app.py. The app is dark-only,
+     so is the page: it is the brand, not a theme. */
+  :root {
+    --bg: #0b0e14;
+    --panel: #12161f;
+    --border: #1e2634;
+    --spine: #2a5a6b;
+    --text: #dfe6ef;
+    --muted: #6f7c90;
+    --accent: #5ec5e2;
+    --on-accent: #08131a;
+    --warn: #e0a33c;
+    --in: #a98bf5;
+    --mono: Consolas, "SFMono-Regular", Menlo, "DejaVu Sans Mono", monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 var(--sans);
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+  .brand svg { width: 28px; height: 28px; }
+  .wordmark { font: 700 18px var(--mono); letter-spacing: .14em; }
+  nav a { font: 13px var(--mono); color: var(--muted); text-decoration: none; margin-left: 18px; letter-spacing: .06em; }
+  nav a:hover { color: var(--accent); }
+
+  .hero {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center;
+    padding: 40px 0 56px;
+  }
+  .tag { font: 12px var(--mono); color: var(--spine); letter-spacing: .2em; text-transform: uppercase; margin: 0 0 14px; }
+  h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.1; margin: 0 0 18px; letter-spacing: -.01em; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { color: #b6c1cf; font-size: 18px; margin: 0 0 28px; max-width: 34em; }
+
+  .install {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 12px 12px 16px; font: 15px var(--mono); max-width: 440px;
+  }
+  .install code { flex: 1; overflow-x: auto; white-space: nowrap; }
+  .install .prompt { color: var(--spine); user-select: none; }
+  button.copy {
+    background: var(--accent); color: var(--on-accent); border: 0; border-radius: 4px;
+    font: 700 12px var(--mono); letter-spacing: .1em; padding: 8px 12px; cursor: pointer;
+  }
+  button.copy:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .then { font: 13px var(--mono); color: var(--muted); margin: 12px 0 0; }
+  .then code { color: var(--text); }
+
+  .shot { justify-self: center; }
+  .shot img {
+    width: 100%; max-width: 360px; height: auto; display: block;
+    border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 30px 80px -30px rgba(94, 197, 226, .25);
+  }
+
+  section { padding: 48px 0; border-top: 1px solid var(--border); }
+  h2 { font: 700 13px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin: 0 0 24px; }
+
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .mode { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .mode h3 { margin: 0 0 4px; font: 700 16px var(--mono); color: var(--accent); letter-spacing: .06em; }
+  .mode .dir { font: 13px var(--mono); color: var(--muted); margin: 0 0 12px; }
+  .mode p { margin: 0 0 12px; color: #b6c1cf; }
+  .mode .cost { font: 13px var(--mono); color: var(--text); margin: 0; }
+  .mode .cost b { color: var(--accent); font-weight: 700; }
+  .mode.two .dir span { color: var(--in); }
+
+  .costgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+  .big { font: 700 clamp(40px, 7vw, 64px) / 1 var(--mono); color: var(--accent); margin: 0; }
+  .big small { font-size: 18px; color: var(--muted); font-weight: 400; }
+  .fine { color: var(--muted); font-size: 14px; }
+  table { border-collapse: collapse; width: 100%; font: 14px var(--mono); }
+  td, th { padding: 9px 0; border-bottom: 1px solid var(--border); text-align: left; }
+  th { color: var(--muted); font-weight: 400; }
+  .n { text-align: right; }
+  td.n { color: var(--text); }
+
+  ul.need { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 32px; }
+  ul.need li { padding-left: 22px; position: relative; color: #b6c1cf; }
+  ul.need li::before {
+    content: ""; position: absolute; left: 0; top: .5em; width: 10px; height: 9px; background: var(--accent);
+    clip-path: polygon(0 50%, 25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%);
+  }
+  ul.need li.warn::before { background: var(--warn); }
+
+  .talk { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+  .btn {
+    display: inline-block; text-decoration: none; font: 700 13px var(--mono); letter-spacing: .08em;
+    padding: 11px 16px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent);
+  }
+  .btn.solid { background: var(--accent); color: var(--on-accent); }
+
+  footer { padding: 32px 0 48px; color: var(--muted); font: 13px var(--mono); border-top: 1px solid var(--border); }
+  footer p { margin: 0 0 6px; }
+  footer .quote { font-family: var(--sans); font-style: italic; color: #8a96a8; margin-bottom: 16px; }
+
+  @media (max-width: 760px) {
+    .hero, .costgrid { grid-template-columns: 1fr; }
+    .modes { grid-template-columns: 1fr; }
+    ul.need { grid-template-columns: 1fr; }
+    nav a.opt { display: none; }
+    .hero { padding-top: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <a class="brand" href="#" aria-label="chasqui">
+    <!-- Same hexagon and arrows as chasqui/ui/icon.py (SMALL_ARROW_*), in a 100x100 box -->
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <polygon points="0,50 25,0 75,0 100,50 75,100 25,100" fill="#5ec5e2"/>
+      <polygon points="15,22 58,22 58,13 86,31 58,49 58,40 15,40" fill="#08131a"/>
+      <polygon points="85,60 42,60 42,51 14,69 42,87 42,78 85,78" fill="#08131a"/>
+    </svg>
+    <span class="wordmark">CHASQUI</span>
+  </a>
+  <nav>
+    <a class="opt" href="#modes">MODES</a>
+    <a class="opt" href="#cost">COST</a>
+    <a href="https://github.com/kvothesson/chasqui">GITHUB</a>
+  </nav>
+</header>
+
+<main>
+<div class="hero">
+  <div>
+    <p class="tag">Real-time voice translation</p>
+    <h1>Speak your language.<br><em>Hear theirs in yours.</em></h1>
+    <p class="lede">A small window on your desktop that translates speech as it happens: your calls in any app, both ways, or any video playing on your PC. Open source. Your own OpenAI key. You pay by the minute, nothing else.</p>
+    <div class="install">
+      <span class="prompt">$</span>
+      <code id="cmd">pip install chasqui-translate</code>
+      <button class="copy" type="button" data-copy="pip install chasqui-translate">COPY</button>
+    </div>
+    <p class="then">then <code>chasqui ui</code> and press START</p>
+  </div>
+  <div class="shot">
+    <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png"
+         alt="The chasqui window: language pickers, mode, Start, and a live transcript with each line and its translation"
+         width="402" loading="eager">
+  </div>
+</div>
+
+<section id="modes">
+  <h2>Three ways to use it</h2>
+  <div class="modes">
+    <article class="mode">
+      <h3>media</h3>
+      <p class="dir">their video → your ears</p>
+      <p>YouTube, a stream, a lecture, anything your PC plays. You hear it in your language while it plays.</p>
+      <p class="cost"><b>$0.034</b>/min · about $2 an hour</p>
+    </article>
+    <article class="mode two">
+      <h3>headset</h3>
+      <p class="dir">you ⇄ <span>them</span>, any app</p>
+      <p>You speak your language and they hear theirs. They answer and you hear yours in your earphones. Zero config: it swaps your Windows default mic while it runs and gives it back on stop. Meet, Zoom, Teams, Discord.</p>
+      <p class="cost"><b>$0.068</b>/min · two directions</p>
+    </article>
+    <article class="mode two">
+      <h3>meet</h3>
+      <p class="dir">you ⇄ <span>them</span>, through a virtual mic</p>
+      <p>The same two-way call, wired by hand: you pick the virtual cable as the mic inside Meet or Zoom, and your Windows defaults stay untouched.</p>
+      <p class="cost"><b>$0.068</b>/min · two directions</p>
+    </article>
+  </div>
+</section>
+
+<section id="cost">
+  <h2>What it costs</h2>
+  <div class="costgrid">
+    <div>
+      <p class="big">$0.034<small> / minute</small></p>
+      <p>chasqui uses OpenAI's <code>gpt-realtime-translate</code>, which is billed by the minute of audio, not by tokens. No subscription, no account with us: the bill comes from your own OpenAI key, and the window shows a running total while you talk.</p>
+      <p class="fine">A two-way call runs two streams at once, so it costs double. OpenAI also prices live transcription ($0.017/min) separately, and it is not settled whether that stacks on top; chasqui's meter counts it, so the figure on screen is the high end. Prices as of July 2026.</p>
+    </div>
+    <table aria-label="Example costs">
+      <thead><tr><th>Session</th><th class="n">Cost</th></tr></thead>
+      <tbody>
+        <tr><td>10 min YouTube video</td><td class="n">$0.34</td></tr>
+        <tr><td>1 h stream</td><td class="n">$2.04</td></tr>
+        <tr><td>30 min call, both ways</td><td class="n">$2.04</td></tr>
+        <tr><td>1 h call, both ways</td><td class="n">$4.08</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>What you need</h2>
+  <ul class="need">
+    <li>Python 3.11 or newer</li>
+    <li>An OpenAI API key with access to <code>gpt-realtime-translate</code></li>
+    <li>Windows, for the audio modes</li>
+    <li><a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> (free) for the audio modes, plus Stereo Mix (or Hi-Fi Cable) for two-way calls</li>
+    <li>12 languages: English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian, Hindi</li>
+    <li class="warn">Linux and macOS: text mode only, for now</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Tell us how it went</h2>
+  <p>chasqui is young. The most useful thing you can do is use it for something real and tell us what happened, good or bad.</p>
+  <div class="talk">
+    <a class="btn solid" href="https://github.com/kvothesson/chasqui/issues/new?template=used-it-for.yml">I USED IT FOR…</a>
+    <a class="btn" href="https://github.com/kvothesson/chasqui/issues/new?template=bug.yml">SOMETHING BROKE</a>
+    <a class="btn" href="https://github.com/kvothesson/chasqui">READ THE CODE</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p class="quote">The chasqui ran hundreds of kilometers carrying a message he could not read.</p>
+  <p>MIT licensed · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a> · <a href="https://github.com/kvothesson/chasqui/blob/master/README.es.md">En español</a></p>
+  <p>Not affiliated with OpenAI.</p>
+</footer>
+
+</div>
+<script>
+  document.querySelectorAll("button.copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = b.getAttribute("data-copy");
+      var done = function () { b.textContent = "COPIED"; setTimeout(function () { b.textContent = "COPY"; }, 1500); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, function () {}); }
+    });
+  });
+</script>
+</body>
+</html>

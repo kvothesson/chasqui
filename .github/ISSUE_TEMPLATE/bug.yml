@@ -1,0 +1,68 @@
+name: Something broke
+description: chasqui crashed, went silent, translated the wrong thing, or grabbed the wrong device.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Audio setups differ a lot between machines, so
+        the details below are what make a bug fixable.
+
+        **Before pasting logs, remove your API key** if it appears anywhere.
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - headset
+        - meet
+        - media
+        - virtual-mic
+        - bridge
+        - device
+        - text
+        - not sure
+    validations:
+      required: true
+  - type: input
+    id: languages
+    attributes:
+      label: Languages
+      placeholder: "es → en"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      placeholder: "I pressed START, the light went ON ROUTE, they spoke English and I heard nothing in my earphones."
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The log
+      description: In the window, open ▸ BUFFER and copy everything. From the terminal, run again with `CHASQUI_DEBUG=1` for more detail.
+      render: text
+  - type: textarea
+    id: devices
+    attributes:
+      label: Output of `chasqui devices`
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Output of `chasqui --version`
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and Python version
+      placeholder: "Windows 11, Python 3.12"
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: The other app, if any
+      placeholder: "Google Meet in Chrome / Zoom desktop / YouTube"

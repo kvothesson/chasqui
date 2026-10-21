@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Model or billing question about OpenAI itself
+    url: https://help.openai.com/
+    about: Access to gpt-realtime-translate, rate limits and invoices are handled by OpenAI, not chasqui.

@@ -1,0 +1,74 @@
+name: I used it for…
+description: Tell us what you used chasqui for and how it went. Good, bad, or "almost gave up". This is the most useful thing you can send.
+title: "[used it for] "
+labels: ["used-it-for"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No bug needed. We want to know where chasqui gets used in real life and
+        what got in the way. Short answers are fine.
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you use it for?
+      placeholder: "A 30-minute call with a client in Brazil. / Watching a Japanese stream live."
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - headset
+        - meet
+        - media
+        - virtual-mic
+        - text
+        - not sure
+    validations:
+      required: true
+  - type: input
+    id: languages
+    attributes:
+      label: Languages
+      placeholder: "es → en"
+  - type: dropdown
+    id: worked
+    attributes:
+      label: Did it do the job?
+      options:
+        - "Yes, I'd use it again for this"
+        - "Mostly, with some problems"
+        - "Not really"
+        - "I couldn't get it running"
+    validations:
+      required: true
+  - type: dropdown
+    id: latency
+    attributes:
+      label: How did the delay feel?
+      options:
+        - Fine for this
+        - Noticeable but OK
+        - Too slow for this
+        - Didn't get that far
+  - type: textarea
+    id: friction
+    attributes:
+      label: What almost made you give up?
+      description: Installing, the API key, VB-Cable, devices, the cost, a wrong translation, anything.
+  - type: input
+    id: cost
+    attributes:
+      label: Roughly how long, and what did the meter say?
+      placeholder: "~25 min, $1.70"
+  - type: textarea
+    id: wish
+    attributes:
+      label: One thing you'd change
+  - type: input
+    id: found
+    attributes:
+      label: Where did you hear about chasqui?
+      placeholder: "Hacker News / Reddit / a friend / YouTube"
