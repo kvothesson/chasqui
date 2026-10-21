@@ -15,6 +15,23 @@ Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 
 ## Instalación
 
+### Windows: el instalador
+
+**[Descargar chasqui-setup-0.2.0.exe](https://github.com/kvothesson/chasqui/releases/download/v0.2.0/chasqui-setup-0.2.0.exe)** (27 MB, Windows 10/11, 64 bits).
+
+Sin Python y sin pedir permisos de administrador. Se instala para tu usuario,
+agrega una entrada en el menú Inicio y abre chasqui, que en el primer arranque
+te guía para cargar la API key (ver
+[Primer arranque](#primer-arranque-la-ventana-de-configuración)). Para las
+llamadas también necesitás [VB-Audio Cable](https://vb-audio.com/Cable/); la
+ventana de configuración te avisa si falta.
+
+El instalador todavía no está firmado, así que Windows SmartScreen va a decir
+"Windows protegió tu PC". Hacé clic en **Más información** y después en
+**Ejecutar de todas formas**.
+
+### Con Python
+
 **Necesitás:** Python 3.11 o superior, una API key de OpenAI y, para los modos
 que meten audio traducido dentro de otra app,
 [VB-Audio Cable](https://vb-audio.com/Cable/) en Windows.
