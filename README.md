@@ -215,6 +215,14 @@ api:
   text_model: gpt-4o-mini         # chat model for the text adapter
 ```
 
+**Cost or quality.** The default, `gpt-realtime-translate`, is the cheap one:
+about USD 2 an hour per direction. It also slips more: on a set of trap
+phrases ("¿Llegaste bien?", "¿Me das un mate?") it got 5 of 30 turns wrong,
+mostly by merging two sentences and dropping one. `model: gpt-realtime` got
+1 of 30 wrong, because each turn is translated on its own so a short
+question is never *answered*, but it costs roughly 5 to 10 times more.
+Measure it yourself with `examples/drift_check.py`.
+
 > **403 `model_not_found`?** Your OpenAI project doesn't have access to the
 > configured model. Check which models are enabled for your project at
 > [platform.openai.com](https://platform.openai.com/settings) and set
