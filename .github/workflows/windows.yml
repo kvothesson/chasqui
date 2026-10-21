@@ -21,8 +21,8 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -73,7 +73,7 @@ jobs:
 
       # When SignPath approves the project, the signing step goes here: it
       # takes this artifact, signs it, and the release gets the signed one.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: chasqui-setup
           path: ${{ steps.setup.outputs.file }}
@@ -86,7 +86,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: chasqui-setup
       - run: gh release upload "$GITHUB_REF_NAME" chasqui-setup-*.exe --clobber --repo "$GITHUB_REPOSITORY"
