@@ -51,11 +51,11 @@ RATES: dict[str, ModelRates] = {
 }
 
 # chasqui asks for input transcription on every session (see
-# Pipeline._build_translate_session). It is priced separately on the pricing
-# page, and whether it stacks on top of the translate minute is NOT settled
-# there. Counted by default: a meter that overshoots is annoying, one that
-# undershoots is a lie. Verify against your dashboard and set
-# `pricing.count_transcription: false` if it turns out to be included.
+# Pipeline._build_translate_session), and it STACKS on top of the translate
+# minute: measured 2026-10-21, a timed session showed up on the OpenAI
+# dashboard as two line items, gpt-realtime-translate and gpt-realtime-whisper.
+# So one direction really costs 0.034 + 0.017 = $0.051/min. The switch stays
+# for a future where OpenAI folds it in.
 TRANSCRIPTION_MODEL = "gpt-realtime-whisper"
 
 UNKNOWN_MODEL_NOTE = "no published rate for this model — cost not counted"

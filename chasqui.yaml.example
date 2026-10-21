@@ -48,7 +48,7 @@ pricing:
   # prices as of 2026-07-25); set them here when a price changes.
   # per_minute: 0.034               # gpt-realtime-translate, PER DIRECTION
   # transcription_per_minute: 0.017 # gpt-realtime-whisper, input transcription
-  count_transcription: true         # false once you confirm it's included
+  count_transcription: true         # billed on top (measured 2026-10-21); keep it on
   budget: 20.00                     # USD; shows "$X left" in the footer
 
 logging:

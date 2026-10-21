@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>chasqui · real-time voice translation</title>
-<meta name="description" content="Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, $0.034 a minute.">
+<meta name="description" content="Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, about $0.05 a minute.">
 <meta property="og:title" content="chasqui · real-time voice translation">
 <meta property="og:description" content="Speak your language. Hear theirs in yours. Calls in any app, YouTube, streams. Windows installer or pip install chasqui-translate.">
 <meta property="og:image" content="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png">
@@ -258,21 +258,21 @@
       <p class="dir"><span data-l="en">their video → your ears</span><span data-l="es">su video → tus oídos</span></p>
       <p data-l="en">YouTube, a stream, a lecture, anything your PC plays. You hear it in your language while it plays.</p>
       <p data-l="es">YouTube, un stream, una clase, cualquier cosa que suene en tu PC. La escuchás en tu idioma mientras se reproduce.</p>
-      <p class="cost"><b>$0.034</b>/min · <span data-l="en">about $2 an hour</span><span data-l="es">unos $2 por hora</span></p>
+      <p class="cost"><b>$0.051</b>/min · <span data-l="en">about $3 an hour</span><span data-l="es">unos $3 por hora</span></p>
     </article>
     <article class="mode two">
       <h3>headset</h3>
       <p class="dir"><span data-l="en">you ⇄ <span>them</span>, any app</span><span data-l="es">vos ⇄ <span>ellos</span>, cualquier app</span></p>
       <p data-l="en">You speak your language and they hear theirs. They answer and you hear yours in your earphones. Zero config: it swaps your Windows default mic while it runs and gives it back on stop. Meet, Zoom, Teams, Discord.</p>
       <p data-l="es">Hablás en tu idioma y te escuchan en el suyo. Te contestan y vos lo escuchás en el tuyo, en los auriculares. Sin configurar nada: cambia el micrófono por defecto de Windows mientras corre y lo devuelve al parar. Meet, Zoom, Teams, Discord.</p>
-      <p class="cost"><b>$0.068</b>/min · <span data-l="en">two directions</span><span data-l="es">dos direcciones</span></p>
+      <p class="cost"><b>$0.102</b>/min · <span data-l="en">two directions</span><span data-l="es">dos direcciones</span></p>
     </article>
     <article class="mode two">
       <h3>meet</h3>
       <p class="dir"><span data-l="en">you ⇄ <span>them</span>, through a virtual mic</span><span data-l="es">vos ⇄ <span>ellos</span>, con un micrófono virtual</span></p>
       <p data-l="en">The same two-way call, wired by hand: you pick the virtual cable as the mic inside Meet or Zoom, and your Windows defaults stay untouched.</p>
       <p data-l="es">La misma llamada de ida y vuelta, conectada a mano: elegís el cable virtual como micrófono dentro de Meet o Zoom y Windows queda como estaba.</p>
-      <p class="cost"><b>$0.068</b>/min · <span data-l="en">two directions</span><span data-l="es">dos direcciones</span></p>
+      <p class="cost"><b>$0.102</b>/min · <span data-l="en">two directions</span><span data-l="es">dos direcciones</span></p>
     </article>
   </div>
 </section>
@@ -303,19 +303,19 @@
   <h2><span data-l="en">What it costs</span><span data-l="es">Cuánto cuesta</span></h2>
   <div class="costgrid">
     <div>
-      <p class="big">$0.034<small> / <span data-l="en">minute</span><span data-l="es">minuto</span></small></p>
-      <p data-l="en">chasqui uses OpenAI's <code>gpt-realtime-translate</code>, which is billed by the minute of audio, not by tokens. No subscription, no account with us: the bill comes from your own OpenAI key, and the window shows a running total while you talk.</p>
-      <p data-l="es">chasqui usa <code>gpt-realtime-translate</code> de OpenAI, que se cobra por minuto de audio, no por tokens. Sin suscripción y sin cuenta con nosotros: la factura llega de tu propia API key de OpenAI, y la ventana te muestra el total mientras hablás.</p>
-      <p class="fine" data-l="en">A two-way call runs two streams at once, so it costs double. OpenAI also prices live transcription ($0.017/min) separately, and it is not settled whether that stacks on top; chasqui's meter counts it, so the figure on screen is the high end. Prices as of July 2026.</p>
-      <p class="fine" data-l="es">Una llamada de ida y vuelta usa dos streams a la vez, así que cuesta el doble. OpenAI cobra aparte la transcripción en vivo ($0.017/min) y no está confirmado si se suma; el medidor de chasqui la cuenta, así que el número en pantalla es el máximo. Precios de julio de 2026.</p>
+      <p class="big">$0.051<small> / <span data-l="en">minute</span><span data-l="es">minuto</span></small></p>
+      <p data-l="en">chasqui uses OpenAI's <code>gpt-realtime-translate</code> ($0.034/min) plus its live transcription, <code>gpt-realtime-whisper</code> ($0.017/min), which shows you the words and tells chasqui where each sentence ends. Both are billed by the minute of audio, not by tokens. No subscription, no account with us: the bill comes from your own OpenAI key, and the window shows a running total while you talk.</p>
+      <p data-l="es">chasqui usa <code>gpt-realtime-translate</code> de OpenAI ($0.034/min) más su transcripción en vivo, <code>gpt-realtime-whisper</code> ($0.017/min), que te muestra las palabras y le indica a chasqui dónde termina cada frase. Las dos se cobran por minuto de audio, no por tokens. Sin suscripción y sin cuenta con nosotros: la factura llega de tu propia API key de OpenAI, y la ventana te muestra el total mientras hablás.</p>
+      <p class="fine" data-l="en">A two-way call runs two streams at once, so it costs double. Checked against a real OpenAI bill in October 2026: the transcription is charged on top of the translation, not included.</p>
+      <p class="fine" data-l="es">Una llamada de ida y vuelta usa dos streams a la vez, así que cuesta el doble. Verificado contra una factura real de OpenAI en octubre de 2026: la transcripción se cobra aparte de la traducción, no viene incluida.</p>
     </div>
     <table>
       <thead><tr><th><span data-l="en">Session</span><span data-l="es">Sesión</span></th><th class="n"><span data-l="en">Cost</span><span data-l="es">Costo</span></th></tr></thead>
       <tbody>
-        <tr><td><span data-l="en">10 min YouTube video</span><span data-l="es">Video de YouTube de 10 min</span></td><td class="n">$0.34</td></tr>
-        <tr><td><span data-l="en">1 h stream</span><span data-l="es">Stream de 1 h</span></td><td class="n">$2.04</td></tr>
-        <tr><td><span data-l="en">30 min call, both ways</span><span data-l="es">Llamada de 30 min, ida y vuelta</span></td><td class="n">$2.04</td></tr>
-        <tr><td><span data-l="en">1 h call, both ways</span><span data-l="es">Llamada de 1 h, ida y vuelta</span></td><td class="n">$4.08</td></tr>
+        <tr><td><span data-l="en">10 min YouTube video</span><span data-l="es">Video de YouTube de 10 min</span></td><td class="n">$0.51</td></tr>
+        <tr><td><span data-l="en">1 h stream</span><span data-l="es">Stream de 1 h</span></td><td class="n">$3.06</td></tr>
+        <tr><td><span data-l="en">30 min call, both ways</span><span data-l="es">Llamada de 30 min, ida y vuelta</span></td><td class="n">$3.06</td></tr>
+        <tr><td><span data-l="en">1 h call, both ways</span><span data-l="es">Llamada de 1 h, ida y vuelta</span></td><td class="n">$6.12</td></tr>
       </tbody>
     </table>
   </div>
@@ -355,8 +355,8 @@
 </div>
 <script>
   var TITLES = {
-    en: ["chasqui · real-time voice translation", "Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, $0.034 a minute."],
-    es: ["chasqui · traducción de voz en tiempo real", "Traducción de voz en tiempo real en tu escritorio. Llamadas en cualquier app, YouTube, streams. Código abierto, tu propia API key de OpenAI, $0.034 por minuto."]
+    en: ["chasqui · real-time voice translation", "Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, about $0.05 a minute."],
+    es: ["chasqui · traducción de voz en tiempo real", "Traducción de voz en tiempo real en tu escritorio. Llamadas en cualquier app, YouTube, streams. Código abierto, tu propia API key de OpenAI, unos $0.05 por minuto."]
   };
   var ALTS = {
     en: "The chasqui window: language pickers, mode, Start, and a live transcript with each line and its translation",

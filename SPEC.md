@@ -41,10 +41,10 @@ chasqui listen --adapter eco
 
 **Modelo:** `gpt-realtime-translate` (mayo 2026)
 - Endpoint: `wss://api.openai.com/v1/realtime/translations`
-- Precio: **$0.034/minuto** de audio
+- Precio: **$0.034/minuto** de audio, más **$0.017/minuto** de la transcripción (`gpt-realtime-whisper`), que se cobra aparte: **$0.051/minuto** por dirección (medido el 2026-10-21)
 - 70+ idiomas de entrada, detección automática de idioma
 - Sin prompting personalizado, sin selección de voz
-- Costo estimado viaje 14 días Japón (30 min/día): **~$14 total**
+- Costo estimado viaje 14 días Japón (30 min/día, una dirección): **~$21 total**
 
 **Fallback:** `gpt-realtime` (general)
 - Endpoint: `wss://api.openai.com/v1/realtime`

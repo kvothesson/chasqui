@@ -226,9 +226,11 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   streams (`Pipeline.usage`), and only reads `usage` events for `gpt-realtime`,
   which does bill by tokens. **Bidirectional modes run two pipelines = two
   billed streams**; anything summing cost must add both or it reports half.
-  Unresolved: whether the separately-priced `gpt-realtime-whisper` input
-  transcription ($0.017/min) stacks on top. Counted by default — measure a
-  timed session against the dashboard and set `pricing.count_transcription`.
+  The `gpt-realtime-whisper` input transcription ($0.017/min) **stacks on
+  top** (measured 2026-10-21: a timed session billed as two dashboard line
+  items), so the real price is **$0.051/min per direction, $0.102 two-way**.
+  It cannot be dropped to save money: the transcript is what the UI shows
+  and what the utterance watchdog listens to.
 - **The translate endpoint needs ~3s of trailing audio to finish a sentence.**
   It releases the end of a translation only while input keeps arriving. The
   silence gate (`core/gate.py`) therefore holds open 3s after the last sound:
