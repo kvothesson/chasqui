@@ -37,8 +37,8 @@ class VirtualMicAdapter(BaseAdapter):
             print("  Install VB-Audio Cable (Windows) or BlackHole (macOS)")
         print()
 
-        real_mic = MicStream(device=self.config.device.mic)
-        virtual_out = SpeakerStream(device=virtual_device)
+        real_mic, virtual_out = self._with_passthrough(
+            MicStream(device=self.config.device.mic), SpeakerStream(device=virtual_device))
         earphone_out = SpeakerStream(device=self.config.device.earphone)
         out = MultiOutputStream(virtual_out, earphone_out)
 

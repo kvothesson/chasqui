@@ -87,8 +87,9 @@ class BridgeAdapter(BaseAdapter):
         # OUT pipeline: my mic → translated → CABLE Input (they hear me in their language)
         out_tuple = (
             self._make_pipeline(),
-            MicStream(device=resolve_device(self.config.device.mic, want_input=True)),
-            SpeakerStream(device=cable_input),
+            *self._with_passthrough(
+                MicStream(device=resolve_device(self.config.device.mic, want_input=True)),
+                SpeakerStream(device=cable_input)),
         )
         in_tuple = None
         if in_capture:

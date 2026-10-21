@@ -216,6 +216,34 @@ chasqui cambian esos valores al arrancar.
 Tus idiomas, el modo, la voz, los dispositivos, la forma de la ventana y el
 gasto acumulado quedan guardados en `~/.chasqui/ui.json`.
 
+### Si del otro lado no escuchan nada
+
+Meet y Teams pasan tu micrófono por un supresor de ruido, y en "Automático"
+puede tomar la voz sintética como ruido y borrar la traducción: chasqui
+muestra el turno en el log y del otro lado escuchan silencio. Ponelo en
+**Bajo** o **Desactivado** (Meet: Configuración > Audio > Cancelación de
+ruido; Teams: Configuración > Dispositivos > Supresión de ruido; Zoom:
+Configuración > Audio > Suprimir ruido de fondo).
+
+### Pagar menos por el silencio, sonar más a vos
+
+Dos opciones en `chasqui.yaml`, las dos apagadas por defecto:
+
+```yaml
+silence_gate: true   # el audio en silencio no se manda, así que no se cobra
+passthrough: 0.15    # tu voz real, bajita, debajo de la traducción
+```
+
+`gpt-realtime-translate` cobra cada minuto que chasqui manda, y en una llamada
+cada dirección pasa mucho tiempo callada. El **silence gate** deja de mandar
+audio después de 1,5 s de silencio y vuelve a mandar, con los 300 ms previos,
+apenas alguien habla; la línea de costo cuenta solo lo enviado. En un lugar
+ruidoso queda abierto (no ahorra, pero no pierde nada): si pasa, subí
+`silence_gate_dbfs`. El **passthrough** mezcla tu voz original debajo de la
+traducción que escucha el otro, así se conserva tu tono y alguien bilingüe
+entiende el original. Desde la terminal:
+`chasqui listen --adapter headset --silence-gate --passthrough 0.15`.
+
 ---
 
 ## Adaptadores
