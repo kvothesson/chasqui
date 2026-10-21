@@ -62,7 +62,7 @@ def test_speech_opens_the_gate_with_preroll_first():
 
 
 def test_pauses_shorter_than_hold_are_sent():
-    gate = SilenceGate(hold_ms=1500, preroll_ms=0)
+    gate = SilenceGate(hold_ms=3000, preroll_ms=0)
     chunks = [tone()] + [silence()] * 10 + [tone()]   # 1s pause
     assert run(gate, chunks) == chunks
 

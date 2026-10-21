@@ -228,7 +228,7 @@ passthrough: 0.15    # your real voice, quiet, under the translation
 
 `gpt-realtime-translate` bills every minute chasqui streams, and in a call each
 direction is quiet much of the time. The **silence gate** stops streaming
-after 1.5s of quiet and starts again, with the 300ms before, the moment
+after 3s of quiet and starts again, with the 300ms before, the moment
 someone speaks; the cost line counts only what was sent. A noisy room keeps it
 open (no savings, nothing lost): raise `silence_gate_dbfs` if so.
 **Passthrough** mixes your original voice under the translation the other side

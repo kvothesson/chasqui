@@ -9,7 +9,7 @@ fewer minutes with the gate.
 Costs real money (TTS + about two minutes of realtime audio, ~$0.07).
 
     python examples/gate_check.py
-    python examples/gate_check.py --hold 800        # try a shorter tail
+    python examples/gate_check.py --hold 2000 --gate-only   # try a shorter tail
 """
 
 import argparse
@@ -79,7 +79,8 @@ def run_once(cfg, audio: bytes, gate: bool, hold_ms: int):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--to", dest="target_lang", default="en")
-    parser.add_argument("--hold", type=int, default=1500, help="gate hold in ms")
+    parser.add_argument("--hold", type=int, default=3000, help="gate hold in ms")
+    parser.add_argument("--gate-only", action="store_true", help="skip the gate-off baseline")
     args = parser.parse_args()
 
     from openai import OpenAI
@@ -94,7 +95,7 @@ def main() -> None:
     print(f"{len(audio) / 48000:.0f}s of audio per run, {cfg.model}\n")
 
     results = {}
-    for gate in (False, True):
+    for gate in ((True,) if args.gate_only else (False, True)):
         label = f"gate on ({args.hold}ms hold)" if gate else "gate off"
         print(f"--- {label}")
         turns, minutes = run_once(cfg, audio, gate, args.hold)
@@ -103,6 +104,8 @@ def main() -> None:
         print(f"  {len(turns)} turns, {minutes:.2f} min streamed\n")
         results[gate] = (len(turns), minutes)
 
+    if False not in results:
+        return
     (n_off, m_off), (n_on, m_on) = results[False], results[True]
     saved = 1 - m_on / m_off if m_off else 0
     print(f"turns: {n_off} without gate, {n_on} with gate")

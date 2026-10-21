@@ -236,7 +236,7 @@ passthrough: 0.15    # tu voz real, bajita, debajo de la traducción
 
 `gpt-realtime-translate` cobra cada minuto que chasqui manda, y en una llamada
 cada dirección pasa mucho tiempo callada. El **silence gate** deja de mandar
-audio después de 1,5 s de silencio y vuelve a mandar, con los 300 ms previos,
+audio después de 3 s de silencio y vuelve a mandar, con los 300 ms previos,
 apenas alguien habla; la línea de costo cuenta solo lo enviado. En un lugar
 ruidoso queda abierto (no ahorra, pero no pierde nada): si pasa, subí
 `silence_gate_dbfs`. El **passthrough** mezcla tu voz original debajo de la

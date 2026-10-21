@@ -229,6 +229,12 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   Unresolved: whether the separately-priced `gpt-realtime-whisper` input
   transcription ($0.017/min) stacks on top. Counted by default — measure a
   timed session against the dashboard and set `pricing.count_transcription`.
+- **The translate endpoint needs ~3s of trailing audio to finish a sentence.**
+  It releases the end of a translation only while input keeps arriving. The
+  silence gate (`core/gate.py`) therefore holds open 3s after the last sound:
+  with 1.5-2s the last words of each turn came out at the start of the next
+  one. Measured with `examples/gate_check.py` (2026-10-20): 3s hold kept all
+  turns complete and streamed ~52% fewer minutes on a call-like pattern.
 - **There is no OpenAI endpoint for remaining credit balance.** `/v1/organization/costs`
   gives spend (not balance) and needs an *admin* key, which does not belong in
   a chasqui.yaml. "Remaining" in the UI is the user's own `pricing.budget`.
