@@ -17,6 +17,7 @@ chasqui/
     session.py      ← Turn log + session export
     constants.py    ← LANG_NAMES, API endpoint URLs
     selftest.py     ← run_check(): TTS → pipeline round trip, no audio hardware
+    firstrun.py     ← first-run checks: saved key, key verification, cable, switcher
     pricing.py      ← cost meter: rate table + estimate() over Pipeline.usage
     windevice.py    ← Windows default audio output switcher (PowerShell AudioDeviceCmdlets)
   adapters/
@@ -33,6 +34,10 @@ chasqui/
     runner.py       ← Session control for the GUI: worker thread + event queue (no tkinter)
     app.py          ← The Tk window
     icon.py         ← The icon, drawn in code: PNG/ICO written with stdlib only
+    wizard.py       ← The setup window (Toplevel) over core/firstrun.py
+packaging/
+  build_windows.py  ← PyInstaller app folder + Inno Setup installer
+  chasqui.iss       ← the installer script (per-user, no admin)
   cli.py            ← Click CLI: listen, ui, translate, check, devices, langs, init
 ```
 
@@ -254,6 +259,19 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   distribution name (`click.version_option(package_name=...)`,
   `importlib.metadata`) must use `chasqui-translate`, or `chasqui --version`
   crashes with PackageNotFoundError.
+- **The setup window saves the key to `~/.chasqui/config.yaml`** and
+  `load_config()` reads it only as a last resort (after the yaml's own key and
+  `OPENAI_API_KEY`). It never writes into a project `chasqui.yaml`: that file
+  may live in a repo. `firstrun.check_api_key` hits `GET /v1/models/{model}`,
+  which is free: 401 bad key, 404 key without access to that model.
+- **`load_dotenv()` walks up from `core/config.py`, not from the cwd.** In a
+  source checkout it finds the repo's `.env` wherever you run from, so a test
+  of "no key" must clear `OPENAI_API_KEY` *after* importing chasqui.
+- **The installed app bundles AudioDeviceCmdlets** (`packaging/build_windows.py`
+  copies it from the build machine, MIT license alongside). `windevice` imports
+  it from `sys._MEIPASS` when frozen; a pip install keeps using the user's own.
+  Every PowerShell call passes `CREATE_NO_WINDOW`: from the windowed exe each
+  call would otherwise flash a console.
 - **AudioDeviceCmdlets params are `-Recording` / `-Playback`** (they return the
   *default* device of that type). `-RecordingDefault` does not exist — it fails with
   AmbiguousParameterSet, and a bare `except` made the headset mic auto-switch a

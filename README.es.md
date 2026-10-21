@@ -97,6 +97,22 @@ idiomas.
 Abajo está el selector de modo. `Headset — bidirectional, any app` es el que
 conviene probar primero.
 
+### Primer arranque: la ventana de configuración
+
+Si no hay API key en ningún lado, la ventana abre encima una ventanita de
+configuración que revisa tres cosas y dice si cada una está lista:
+
+1. **Tu key de OpenAI.** La pegás y apretás VERIFY: chasqui le pregunta a
+   OpenAI si esa key puede usar el modelo que va a correr, y la guarda en
+   `~/.chasqui/config.yaml`. Una key en `OPENAI_API_KEY` o en un
+   `chasqui.yaml` sigue ganándole a la guardada.
+2. **VB-Audio Cable**, que necesitan los modos de llamada. Con un link si falta.
+3. **El cambiador de dispositivos** (el módulo de PowerShell AudioDeviceCmdlets),
+   con el que los modos headset y media mueven tus dispositivos de Windows.
+
+**DONE · PING** la cierra y corre un ping, así lo primero que ves es una
+traducción. **SETUP**, debajo de START, la vuelve a abrir.
+
 ### Start, Ping y la luz de estado
 
 **START** abre la sesión. **PING** corre la misma prueba de ida y vuelta que

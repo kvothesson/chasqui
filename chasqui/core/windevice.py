@@ -2,7 +2,22 @@
 
 import sys
 import subprocess
+from pathlib import Path
 from typing import Optional
+
+
+def bundled_module() -> Optional[Path]:
+    """AudioDeviceCmdlets shipped inside the installed app, if this is one.
+
+    The Windows installer carries the module so a fresh machine needs no
+    Install-Module; a pip install keeps using the user's own copy.
+    """
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    psd1 = Path(base) / "AudioDeviceCmdlets" / "AudioDeviceCmdlets.psd1"
+    return psd1 if psd1.exists() else None
+
 
 if sys.platform != "win32":
     def get_default_output_name() -> Optional[str]:
@@ -23,12 +38,23 @@ else:
     # and resolve_device() lookups downstream.
     _UTF8 = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
 
+    # The installed chasqui is a windowed process with no console, so every
+    # PowerShell call would flash a console window of its own on screen.
+    _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+    def _import() -> str:
+        module = bundled_module()
+        if not module:
+            return ""
+        quoted = str(module).replace("'", "''")   # PowerShell's own escape
+        return f"Import-Module '{quoted}'; "
+
     def _ps(cmd: str, timeout: int = 8) -> Optional[str]:
         try:
             r = subprocess.run(
-                ["powershell", "-NoProfile", "-Command", _UTF8 + cmd],
+                ["powershell", "-NoProfile", "-Command", _UTF8 + _import() + cmd],
                 capture_output=True, timeout=timeout,
-                encoding="utf-8", errors="replace",
+                encoding="utf-8", errors="replace", creationflags=_NO_WINDOW,
             )
             return r.stdout.strip() if r.returncode == 0 else None
         except Exception:
@@ -41,7 +67,7 @@ else:
     def _set_default(device_type: str, name_hint: str) -> bool:
         # Find the device index whose name contains name_hint, then set it.
         name_hint = name_hint.replace("'", "''")
-        script = f"""
+        script = _import() + f"""
 $dev = Get-AudioDevice -List | Where-Object {{
     $_.Type -eq '{device_type}' -and $_.Name -like '*{name_hint}*'
 }} | Select-Object -First 1
@@ -51,7 +77,7 @@ exit 1
         try:
             r = subprocess.run(
                 ["powershell", "-NoProfile", "-Command", script],
-                capture_output=True, timeout=8,
+                capture_output=True, timeout=8, creationflags=_NO_WINDOW,
             )
             return r.returncode == 0
         except Exception:

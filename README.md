@@ -96,6 +96,22 @@ mode when audio is coming at you. Click it to swap the two languages.
 Below them sits the mode picker. `Headset — bidirectional, any app` is the one
 to start with.
 
+### First run: the setup window
+
+With no API key anywhere, the window opens a small setup window on top of
+itself. It checks three things and says, for each, whether it is ready:
+
+1. **Your OpenAI key.** Paste it and press VERIFY: chasqui asks OpenAI whether
+   the key can use the model it is about to run, and saves it to
+   `~/.chasqui/config.yaml`. A key in `OPENAI_API_KEY` or in a `chasqui.yaml`
+   still wins over the saved one.
+2. **VB-Audio Cable**, which the call modes need. A link if it is missing.
+3. **The device switcher** (the AudioDeviceCmdlets PowerShell module), which
+   the headset and media modes use to move your Windows devices.
+
+**DONE · PING** closes it and runs a ping, so the first thing you see is a
+translation. **SETUP**, under START, opens it again later.
+
 ### Start, Ping, and the state light
 
 **START** opens the session. **PING** runs the same round-trip smoke test as
@@ -234,6 +250,19 @@ Measure it yourself with `examples/drift_check.py`.
 pip install -e ".[dev]"
 pytest
 ```
+
+### Building the Windows app
+
+```bash
+pip install -e . pyinstaller
+python packaging/build_windows.py
+```
+
+That builds `dist/chasqui/chasqui.exe`, a windowed app with Python, PortAudio
+and the AudioDeviceCmdlets module inside, and, if
+[Inno Setup 6](https://jrsoftware.org/isinfo.php) is installed,
+`dist/chasqui-setup-<version>.exe`: a per-user installer, no admin prompt.
+Build from a clean virtualenv; PyInstaller packs whatever it can import.
 
 See [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) for full architecture and [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md) for contributor/agent notes.
 
