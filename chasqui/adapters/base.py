@@ -4,6 +4,7 @@ import abc
 import threading
 from typing import Callable, Optional
 
+from ..core.audio import AudioStream, PassthroughMixStream, TeeInputStream
 from ..core.config import Config
 from ..core.constants import LANG_NAMES
 from ..core.pipeline import Pipeline, TranslationEvent
@@ -91,6 +92,9 @@ class BaseAdapter(abc.ABC):
             vad_threshold=self.config.vad_threshold,
             vad_silence_ms=self.config.vad_silence_ms,
             isolate_turns=self.config.isolate_turns,
+            silence_gate=self.config.silence_gate,
+            gate_threshold_dbfs=self.config.silence_gate_dbfs,
+            gate_hold_ms=self.config.silence_gate_hold_ms,
         ))
 
     def _make_pipeline_reverse(self, on_translation=None) -> Pipeline:
@@ -121,7 +125,22 @@ class BaseAdapter(abc.ABC):
             vad_threshold=self.config.vad_threshold,
             vad_silence_ms=self.config.vad_silence_ms,
             isolate_turns=self.config.isolate_turns,
+            silence_gate=self.config.silence_gate,
+            gate_threshold_dbfs=self.config.silence_gate_dbfs,
+            gate_hold_ms=self.config.silence_gate_hold_ms,
         ))
+
+    def _with_passthrough(self, mic: AudioStream, to_app: AudioStream) -> tuple[AudioStream, AudioStream]:
+        """Wrap an OUT direction so the original voice rides under the translation.
+
+        Only for the stream the other side hears: mixing yourself into your
+        own earphones would just be an echo. With `passthrough: 0` (the
+        default) the streams come back untouched.
+        """
+        if self.config.passthrough <= 0:
+            return mic, to_app
+        mix = PassthroughMixStream(to_app, self.config.passthrough)
+        return TeeInputStream(mic, mix.feed_side), mix
 
     def _register(self, pipeline: Pipeline) -> Pipeline:
         """Track a pipeline so `stop()` can reach it.

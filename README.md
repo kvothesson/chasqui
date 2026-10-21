@@ -208,6 +208,33 @@ default changes, and chasqui's own adapters change defaults at startup.
 Your languages, mode, voice, devices, window shape and running spend are all
 remembered in `~/.chasqui/ui.json`.
 
+### If the other side hears nothing
+
+Meet and Teams run noise suppression on your mic, and on "Auto" it can
+treat a synthesized voice as noise and filter the translation out: chasqui
+shows the turn in the log, and the other side hears silence. Set it to
+**Low** or **Off** (Meet: Settings > Audio > Noise cancellation; Teams:
+Settings > Devices > Noise suppression; Zoom: Settings > Audio > Background
+noise suppression).
+
+### Pay less for silence, sound more like you
+
+Two switches in `chasqui.yaml`, both off by default:
+
+```yaml
+silence_gate: true   # quiet audio isn't streamed, so it isn't billed
+passthrough: 0.15    # your real voice, quiet, under the translation
+```
+
+`gpt-realtime-translate` bills every minute chasqui streams, and in a call each
+direction is quiet much of the time. The **silence gate** stops streaming
+after 1.5s of quiet and starts again, with the 300ms before, the moment
+someone speaks; the cost line counts only what was sent. A noisy room keeps it
+open (no savings, nothing lost): raise `silence_gate_dbfs` if so.
+**Passthrough** mixes your original voice under the translation the other side
+hears, so your tone survives and a bilingual listener catches the original. From
+the terminal: `chasqui listen --adapter headset --silence-gate --passthrough 0.15`.
+
 ---
 
 ## Adapters

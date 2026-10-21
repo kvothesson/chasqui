@@ -98,9 +98,14 @@ def cli():
                    "(default: system default output)")
 @click.option("--loopback", default=None, metavar="DEVICE",
               help="Capture device for the other side's audio (bridge/meet/headset IN)")
+@click.option("--silence-gate/--no-silence-gate", "silence_gate", default=None,
+              help="Don't stream (or pay for) quiet audio")
+@click.option("--passthrough", default=None, type=click.FloatRange(0.0, 1.0), metavar="GAIN",
+              help="Mix your original voice under the translation (e.g. 0.15)")
 @click.option("--config", "config_path", default=None,
               help="Path to chasqui.yaml")
-def listen(source_lang, target_lang, adapter, voice, context, mic, earphone, loopback, config_path):
+def listen(source_lang, target_lang, adapter, voice, context, mic, earphone, loopback,
+           silence_gate, passthrough, config_path):
     """Start real-time audio translation.
 
     \b
@@ -109,6 +114,7 @@ def listen(source_lang, target_lang, adapter, voice, context, mic, earphone, loo
       chasqui listen --from es --to ja --adapter virtual-mic
       chasqui listen --adapter device --voice nova
       chasqui listen --adapter headset --mic "USB Micro" --earphone "Auriculares"
+      chasqui listen --adapter headset --silence-gate --passthrough 0.15
     """
     cfg = _load_config(
         config_path,
@@ -117,6 +123,8 @@ def listen(source_lang, target_lang, adapter, voice, context, mic, earphone, loo
         adapter=adapter,
         voice=voice,
         context=context,
+        silence_gate=silence_gate,
+        passthrough=passthrough,
     )
     if mic is not None:
         cfg.device.mic = mic

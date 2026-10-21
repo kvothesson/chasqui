@@ -279,3 +279,80 @@ class MultiOutputStream(AudioStream):
     def close(self) -> None:
         for stream in self._streams:
             stream.close()
+
+
+class TeeInputStream(AudioStream):
+    """Reads from a source and hands every chunk to `on_chunk` on the way."""
+
+    def __init__(self, source: AudioStream, on_chunk):
+        self._source = source
+        self._on_chunk = on_chunk
+
+    def start(self) -> None:
+        if hasattr(self._source, "start"):
+            self._source.start()
+
+    def read(self, chunk_size: int = CHUNK_SIZE) -> bytes:
+        chunk = self._source.read(chunk_size)
+        if chunk:
+            self._on_chunk(chunk)
+        return chunk
+
+    def close(self) -> None:
+        self._source.close()
+
+
+class PassthroughMixStream(AudioStream):
+    """Mixes the original voice, quietly, under the translation.
+
+    The other side of the call hears you translated, with your real voice
+    riding underneath at `gain` (0.15 is a good start): your tone survives,
+    and in a mixed-language call they still catch what you said verbatim.
+
+    Feed the original with `feed_side()` (a TeeInputStream on the mic does
+    it). Every `write()` of translated audio takes the same number of bytes
+    of buffered original and sums them. gpt-realtime-translate streams its
+    output continuously, silence included, so in practice the translation
+    is the clock and the original drains at real time. If no translation is
+    flowing, original older than `max_lag_ms` goes out on its own rather
+    than piling up.
+    """
+
+    def __init__(self, destination: AudioStream, gain: float, max_lag_ms: int = 200):
+        self._dst = destination
+        self.gain = max(0.0, min(1.0, gain))
+        self._max_lag_bytes = max_lag_ms * SAMPLE_RATE * SAMPLE_WIDTH // 1000
+        self._side = bytearray()
+        self._lock = threading.Lock()
+
+    def start(self) -> None:
+        if hasattr(self._dst, "start"):
+            self._dst.start()
+
+    def feed_side(self, chunk: bytes) -> None:
+        scaled = (np.frombuffer(chunk[: len(chunk) // 2 * 2], dtype="<i2") * self.gain)
+        scaled = scaled.astype("<i2").tobytes()
+        overflow = b""
+        with self._lock:
+            self._side.extend(scaled)
+            excess = len(self._side) - self._max_lag_bytes
+            if excess > 0:
+                excess -= excess % 2
+                overflow = bytes(self._side[:excess])
+                del self._side[:excess]
+        if overflow:
+            self._dst.write(overflow)
+
+    def write(self, data: bytes) -> None:
+        with self._lock:
+            n = min(len(self._side), len(data)) // 2 * 2
+            side = bytes(self._side[:n])
+            del self._side[:n]
+        if n:
+            mixed = (np.frombuffer(data[:n], dtype="<i2").astype(np.int32)
+                     + np.frombuffer(side, dtype="<i2"))
+            data = np.clip(mixed, -32768, 32767).astype("<i2").tobytes() + data[n:]
+        self._dst.write(data)
+
+    def close(self) -> None:
+        self._dst.close()
