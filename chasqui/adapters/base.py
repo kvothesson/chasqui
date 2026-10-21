@@ -90,6 +90,7 @@ class BaseAdapter(abc.ABC):
             on_translation=_combined,
             vad_threshold=self.config.vad_threshold,
             vad_silence_ms=self.config.vad_silence_ms,
+            isolate_turns=self.config.isolate_turns,
         ))
 
     def _make_pipeline_reverse(self, on_translation=None) -> Pipeline:
@@ -119,6 +120,7 @@ class BaseAdapter(abc.ABC):
             on_translation=_combined,
             vad_threshold=self.config.vad_threshold,
             vad_silence_ms=self.config.vad_silence_ms,
+            isolate_turns=self.config.isolate_turns,
         ))
 
     def _register(self, pipeline: Pipeline) -> Pipeline:

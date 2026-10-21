@@ -6,6 +6,7 @@ import json
 import os
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -60,6 +61,7 @@ class Pipeline:
         on_translation: Optional[Callable[[TranslationEvent], None]] = None,
         vad_threshold: float = 0.5,
         vad_silence_ms: int = 600,
+        isolate_turns: bool = False,
     ):
         self.source_lang = source_lang
         self.target_lang = target_lang
@@ -72,6 +74,15 @@ class Pipeline:
         self.vad_silence_ms = vad_silence_ms
         self._stop_event = threading.Event()
         self._is_translate_model = "translate" in model
+        # Isolated turns (gpt-realtime only; the translate endpoint takes no
+        # instructions): the server never answers inside the conversation.
+        # Each finished transcript is translated by its own out-of-band
+        # response with no history, so a short question aimed at "you" has
+        # nothing to reply to. Costs the transcription wait (~1s) per turn.
+        self.isolate_turns = isolate_turns and not self._is_translate_model
+        self._turn_queue: deque = deque()   # (source text, speech start) waiting
+        self._active_turn = None            # the one being translated now
+        self._speech_at = None
         # What this session has cost so far, in the units its endpoint bills
         # in: audio bytes for the duration-billed translate model, tokens for
         # gpt-realtime (which reports them on response.done).
@@ -203,18 +214,52 @@ class Pipeline:
                     "input": {
                         "format": {"type": "audio/pcm", "rate": 24000},
                         "transcription": {"model": "gpt-realtime-whisper"},
-                        "turn_detection": {
-                            "type": "server_vad",
-                            "threshold": self.vad_threshold,
-                            "prefix_padding_ms": 300,
-                            "silence_duration_ms": self.vad_silence_ms,
-                        },
+                        "turn_detection": self._build_turn_detection(),
                     },
                     "output": {
                         "format": {"type": "audio/pcm", "rate": 24000},
                         "voice": self.voice,
                     },
                 },
+            },
+        }
+
+    def _build_turn_detection(self) -> dict:
+        detection = {
+            "type": "server_vad",
+            "threshold": self.vad_threshold,
+            "prefix_padding_ms": 300,
+            "silence_duration_ms": self.vad_silence_ms,
+        }
+        if self.isolate_turns:
+            # VAD still cuts turns; responses are created by hand, one per
+            # transcript, and new speech must not cancel one mid-sentence.
+            detection["create_response"] = False
+            detection["interrupt_response"] = False
+        return detection
+
+    def _build_isolated_response(self, text: str) -> dict:
+        """An out-of-band response that translates one transcript.
+
+        `conversation: "none"` keeps it out of the session's history and the
+        explicit `input` is the ONLY thing it sees — the user's words arrive
+        quoted, as material to translate rather than a message to answer.
+        """
+        tgt = LANG_NAMES.get(self.target_lang, self.target_lang)
+        return {
+            "type": "response.create",
+            "response": {
+                "conversation": "none",
+                "output_modalities": ["audio"],
+                "instructions": self._build_instructions(),
+                "input": [{
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": f"Translate into {tgt}. Say only the translation.\n«{text}»",
+                    }],
+                }],
             },
         }
 
@@ -305,11 +350,14 @@ class Pipeline:
                 if idle > (self.TRANSCRIPT_FLUSH_S if complete else self.TRANSCRIPT_FLUSH_MAX_S):
                     _flush()
 
-        watchdog = asyncio.create_task(_watchdog())
+        # Isolated turns always end in response.done; an inactivity flush
+        # could only cut a translation short.
+        watchdog = None if self.isolate_turns else asyncio.create_task(_watchdog())
         try:
             await self._consume_events(ws, output_stream, state, _flush)
         finally:
-            watchdog.cancel()
+            if watchdog:
+                watchdog.cancel()
 
     async def _consume_events(self, ws, output_stream: AudioStream, state: dict, _flush) -> None:
         async for raw in ws:
@@ -327,10 +375,29 @@ class Pipeline:
                 else:
                     print(f"  [debug] event: {t}", flush=True)
 
-            # Speech start — new utterance boundary (gpt-realtime only)
+            # Speech start — new utterance boundary (gpt-realtime only).
+            # Isolated turns only note the time: a translation still playing
+            # belongs to the previous turn and must not be flushed early.
             if t in ("input_audio_buffer.speech_started", "session.speech_started"):
+                if self.isolate_turns:
+                    self._speech_at = time.time()
+                else:
+                    _flush()
+                    state["t_start"] = time.time()
+
+            elif self.isolate_turns and t == "conversation.item.input_audio_transcription.completed":
+                text = (event.get("transcript") or "").strip()
+                if text:
+                    self._turn_queue.append((text, self._speech_at))
+                    await self._next_isolated_turn(ws)
+
+            elif self.isolate_turns and t == "response.done":
+                self._record_usage(event)
+                if self._active_turn:
+                    state["source"], state["t_start"] = self._active_turn
+                    self._active_turn = None
                 _flush()
-                state["t_start"] = time.time()
+                await self._next_isolated_turn(ws)
 
             # Source transcript (what the user said)
             elif t in (
@@ -381,6 +448,17 @@ class Pipeline:
             elif t == "error":
                 msg = event.get("error", {}).get("message", str(event))
                 raise RuntimeError(f"Realtime API error: {msg}")
+
+    async def _next_isolated_turn(self, ws) -> None:
+        """Start translating the next queued transcript, one at a time.
+
+        Serialized on purpose: two responses at once would play over each
+        other and interleave their transcript deltas in `state`.
+        """
+        if self._active_turn or not self._turn_queue:
+            return
+        self._active_turn = self._turn_queue.popleft()
+        await ws.send(json.dumps(self._build_isolated_response(self._active_turn[0])))
 
     def _record_usage(self, event: dict) -> None:
         """Accumulate the token counts on a `response.done`.

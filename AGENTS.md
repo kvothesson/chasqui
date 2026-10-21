@@ -169,6 +169,17 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   always-on mic it sometimes *answers* instead of translating (e.g. adds 元気だよ to a
   reply). `gpt-realtime` with the built-in interpreter instructions is the
   higher-quality/higher-cost alternative (`api.model` in chasqui.yaml).
+  `api.isolate_turns` (gpt-realtime only) goes further: automatic responses
+  are off, and each finished transcript is translated by an out-of-band
+  `response.create` (`conversation: "none"`, the words quoted as the only
+  input), one at a time. On by default. Measured 2026-10-20 with
+  `examples/drift_check.py` (10 trap phrases × 3 runs, read by hand): wrong
+  turns were translate 5/30 (it merges utterances and drops one), gpt-realtime
+  4/30 (one real reply: «¿Llegaste bien?» → うん、大丈夫だよ; "mate" heard as
+  待って), isolated 1/30, for ~0.5s more per short turn. Its one failure mode:
+  it translates the *transcript*, so a whisper mishearing ("ciste" for
+  "chiste") is translated faithfully. The script's text-model judge is a
+  helper, not the measure; it still mislabels some turns.
 - **`CHASQUI_DEBUG=1`** prints every server event type, audio delta counts, and flush
   decisions — first thing to reach for when audio flows but transcripts don't.
 - **Windows device names come in two lengths**: PowerShell/AudioDeviceCmdlets report
