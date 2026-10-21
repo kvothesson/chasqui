@@ -5,7 +5,7 @@
 
 Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 
-**[kvothesson.com/chasqui](https://kvothesson.com/chasqui/?lang=es)** · *[Read in English →](https://github.com/kvothesson/chasqui/blob/master/README.md)*
+**[kvothesson.com/chasqui](https://kvothesson.com/chasqui/es/)** · *[Read in English →](https://github.com/kvothesson/chasqui/blob/master/README.md)*
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="La ventana de chasqui: dos idiomas, un modo, y Start" width="402">

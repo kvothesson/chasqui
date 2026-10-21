@@ -1,19 +1,161 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-lang-auto>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>chasqui · real-time voice translation</title>
-<meta name="description" content="Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, about $0.05 a minute.">
-<meta property="og:title" content="chasqui · real-time voice translation">
-<meta property="og:description" content="Speak your language. Hear theirs in yours. Calls in any app, YouTube, streams. Windows installer or pip install chasqui-translate.">
-<meta property="og:image" content="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png">
+<!-- head:start · written by docs/_build.py, edit META there -->
+<title>chasqui: real-time voice translation for calls and videos</title>
+<meta name="description" content="Real-time voice translator for Windows: two-way calls in any app, YouTube and streams. Open source, runs on your own OpenAI key, $0.051 a minute.">
+<link rel="canonical" href="https://kvothesson.com/chasqui/">
+<link rel="alternate" hreflang="en" href="https://kvothesson.com/chasqui/">
+<link rel="alternate" hreflang="es" href="https://kvothesson.com/chasqui/es/">
+<link rel="alternate" hreflang="x-default" href="https://kvothesson.com/chasqui/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="chasqui">
+<meta property="og:url" content="https://kvothesson.com/chasqui/">
+<meta property="og:title" content="chasqui: real-time voice translation for calls and videos">
+<meta property="og:description" content="Real-time voice translator for Windows: two-way calls in any app, YouTube and streams. Open source, runs on your own OpenAI key, $0.051 a minute.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_LA">
+<meta property="og:image" content="https://kvothesson.com/chasqui/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="chasqui, real-time voice translation for Windows, next to its window with a live transcript">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "SoftwareApplication",
+   "@id": "https://kvothesson.com/chasqui/#app",
+   "name": "chasqui",
+   "alternateName": "chasqui-translate",
+   "description": "Real-time voice translator for Windows: two-way calls in any app, YouTube and streams. Open source, runs on your own OpenAI key, $0.051 a minute.",
+   "url": "https://kvothesson.com/chasqui/",
+   "applicationCategory": "MultimediaApplication",
+   "applicationSubCategory": "Real-time speech translation",
+   "operatingSystem": "Windows 10, Windows 11",
+   "softwareVersion": "0.2.0",
+   "downloadUrl": "https://github.com/kvothesson/chasqui/releases/download/v0.2.0/chasqui-setup-0.2.0.exe",
+   "fileSize": "27 MB",
+   "license": "https://opensource.org/licenses/MIT",
+   "isAccessibleForFree": true,
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+   },
+   "screenshot": "https://kvothesson.com/chasqui/img/ui-transcript.png",
+   "image": "https://kvothesson.com/chasqui/img/og-en.png",
+   "author": {
+    "@type": "Person",
+    "name": "kvothesson",
+    "url": "https://github.com/kvothesson"
+   },
+   "sameAs": [
+    "https://github.com/kvothesson/chasqui",
+    "https://pypi.org/project/chasqui-translate/"
+   ]
+  },
+  {
+   "@type": "WebPage",
+   "@id": "https://kvothesson.com/chasqui/",
+   "url": "https://kvothesson.com/chasqui/",
+   "name": "chasqui: real-time voice translation for calls and videos",
+   "description": "Real-time voice translator for Windows: two-way calls in any app, YouTube and streams. Open source, runs on your own OpenAI key, $0.051 a minute.",
+   "inLanguage": "en",
+   "about": {
+    "@id": "https://kvothesson.com/chasqui/#app"
+   },
+   "primaryImageOfPage": "https://kvothesson.com/chasqui/img/og-en.png"
+  },
+  {
+   "@type": "FAQPage",
+   "@id": "https://kvothesson.com/chasqui/#faq",
+   "inLanguage": "en",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "How do I translate a Zoom, Meet or Teams call in real time?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Pick headset mode and press Start. You speak your language and the other person hears a translated voice in theirs; they answer and you hear it in yours, in your earphones. It works in any app that uses the Windows default microphone, because chasqui swaps that microphone for a virtual cable while it runs and gives it back when you stop. You need the free VB-Audio Cable. Two-way calls are the newest part, so tell us how yours went."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Can it translate a YouTube video or a livestream?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Yes, that is media mode. It listens to whatever your PC is playing, YouTube, a Twitch stream, a lecture, a podcast, and speaks it in your language while it plays, with the transcript in the window. It costs about $3 an hour."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Is chasqui free?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "The app is free and open source (MIT). The translation itself runs on OpenAI with your own API key: $0.051 per minute of audio for one direction ($0.034 translation plus $0.017 transcription), $0.102 for a two-way call. There is no subscription and no account with us, and the window shows the running cost while you talk."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "How long is the delay?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Usually a second or two behind the speaker: we measured about 1.6 seconds from the original words to the translated voice. The model waits for a few seconds of audio after a sentence to finish it, so the last words of a turn can come a little later."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Which languages does it translate?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Twelve, in any direction between them: English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian and Hindi."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Does my audio go through your servers?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "No. chasqui connects straight from your PC to the OpenAI Realtime API with your key. There is no chasqui server, account or analytics in between, and OpenAI's API data policies apply to the audio."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Does it work on Mac or Linux?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Not for audio yet. Calls and video translation need Windows 10 or 11, because chasqui switches Windows audio devices for you. On Linux and macOS the text mode works with pip install chasqui-translate."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Why does Windows warn me about the installer?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Because it is new and not code-signed yet, so Microsoft has not seen the file often. The warning means \"unknown\", not \"harmful\". The installer is built from the public source code by GitHub Actions, and you can read every line on GitHub."
+     }
+    }
+   ]
+  }
+ ]
+}
+</script>
+<script type="application/json" id="i18n">{"en": {"title": "chasqui: real-time voice translation for calls and videos", "description": "Real-time voice translator for Windows: two-way calls in any app, YouTube and streams. Open source, runs on your own OpenAI key, $0.051 a minute.", "alt": "The chasqui window: language pickers, mode, Start, and a live transcript with each line and its translation"}, "es": {"title": "chasqui: traducción de voz en tiempo real para llamadas y videos", "description": "Traductor de voz en tiempo real para Windows: llamadas de ida y vuelta en cualquier app, YouTube y streams. Código abierto, con tu propia API key de OpenAI, US$0.051 por minuto.", "alt": "La ventana de chasqui: idiomas, modo, Start y la transcripción en vivo con cada frase y su traducción"}}</script>
+<!-- head:end -->
 <meta name="theme-color" content="#0b0e14">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='0,50 25,6 75,6 100,50 75,94 25,94' fill='%235ec5e2'/%3E%3C/svg%3E">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-180.png">
 <script>
   // Pick the language before first paint, so nobody sees the wrong one flash.
+  // Only here: /es/ is the Spanish URL and stays Spanish, so search engines
+  // index each language at its own address.
   // Order: ?lang= in the link, then the visitor's own choice, then the browser.
   (function () {
+    if (!document.documentElement.hasAttribute("data-lang-auto")) return;
     var lang = null;
     try { lang = new URLSearchParams(location.search).get("lang"); } catch (e) {}
     if (lang !== "en" && lang !== "es") { try { lang = localStorage.getItem("chasqui-lang"); } catch (e) {} }
@@ -66,18 +208,18 @@
   nav a { font: 13px var(--mono); color: var(--muted); text-decoration: none; margin-left: 18px; letter-spacing: .06em; }
   nav a:hover { color: var(--accent); }
   .langs { display: flex; margin-left: 18px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-  .langs button {
-    background: none; border: 0; color: var(--muted); font: 12px var(--mono); letter-spacing: .08em;
-    padding: 5px 8px; cursor: pointer;
+  .langs a {
+    margin: 0; color: var(--muted); font: 12px var(--mono); letter-spacing: .08em;
+    padding: 5px 8px; text-decoration: none;
   }
-  .langs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .langs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   html[lang="en"] .langs [data-set="en"], html[lang="es"] .langs [data-set="es"] { background: var(--accent); color: var(--on-accent); }
 
   .hero {
     display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center;
     padding: 40px 0 56px;
   }
-  .tag { font: 12px var(--mono); color: var(--spine); letter-spacing: .2em; text-transform: uppercase; margin: 0 0 14px; }
+  .tag { display: block; font: 12px var(--mono); color: var(--spine); letter-spacing: .2em; text-transform: uppercase; margin: 0 0 14px; }
   h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.1; margin: 0 0 18px; letter-spacing: -.01em; }
   h1 em { font-style: normal; color: var(--accent); }
   .lede { color: #b6c1cf; font-size: 18px; margin: 0 0 28px; max-width: 34em; }
@@ -169,6 +311,10 @@
   .btn.solid { background: var(--accent); color: var(--on-accent); }
   .btn.violet { border-color: var(--in); background: var(--in); color: var(--on-accent); }
 
+  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 40px; }
+  .faq h3 { margin: 0 0 8px; font-size: 17px; line-height: 1.35; }
+  .faq p { margin: 0; color: #b6c1cf; }
+
   footer { padding: 32px 0 48px; color: var(--muted); font: 13px var(--mono); border-top: 1px solid var(--border); }
   footer p { margin: 0 0 6px; }
   footer .quote { font-family: var(--sans); font-style: italic; color: #8a96a8; margin-bottom: 16px; }
@@ -176,7 +322,7 @@
   @media (max-width: 760px) {
     .hero, .costgrid { grid-template-columns: 1fr; }
     .modes { grid-template-columns: 1fr; }
-    ul.need { grid-template-columns: 1fr; }
+    ul.need, .faq { grid-template-columns: 1fr; }
     nav a.opt { display: none; }
     .hero { padding-top: 16px; }
   }
@@ -200,8 +346,8 @@
     <a class="opt" href="#cost"><span data-l="en">COST</span><span data-l="es">COSTO</span></a>
     <a class="opt" href="https://github.com/kvothesson/chasqui">GITHUB</a>
     <div class="langs" role="group" aria-label="Language / Idioma">
-      <button type="button" data-set="en" lang="en">EN</button>
-      <button type="button" data-set="es" lang="es">ES</button>
+      <a href="https://kvothesson.com/chasqui/" data-set="en" hreflang="en" lang="en">EN</a>
+      <a href="https://kvothesson.com/chasqui/es/" data-set="es" hreflang="es" lang="es">ES</a>
     </div>
   </nav>
 </header>
@@ -209,9 +355,8 @@
 <main>
 <div class="hero">
   <div>
-    <p class="tag"><span data-l="en">Real-time voice translation</span><span data-l="es">Traducción de voz en tiempo real</span></p>
-    <h1 data-l="en">Speak your language.<br><em>Hear theirs in yours.</em></h1>
-    <h1 data-l="es">Hablá tu idioma.<br><em>Escuchá el suyo en el tuyo.</em></h1>
+    <h1 data-l="en"><span class="tag">Real-time voice translator for Windows</span>Speak your language.<br><em>Hear theirs in yours.</em></h1>
+    <h1 data-l="es"><span class="tag">Traductor de voz en tiempo real para Windows</span>Hablá tu idioma.<br><em>Escuchá el suyo en el tuyo.</em></h1>
     <p class="lede" data-l="en">A small window on your desktop that translates speech as it happens: your calls in any app, both ways, or any video playing on your PC. Open source. Your own OpenAI key. You pay by the minute, nothing else.</p>
     <p class="lede" data-l="es">Una ventanita en tu escritorio que traduce la voz mientras habla la gente: tus llamadas en cualquier app, de ida y vuelta, o cualquier video que suene en tu PC. Código abierto. Tu propia API key de OpenAI. Pagás por minuto y nada más.</p>
 
@@ -246,7 +391,7 @@
   <div class="shot">
     <img src="img/ui-transcript.png"
          alt="The chasqui window: language pickers, mode, Start, and a live transcript with each line and its translation"
-         width="402" loading="eager">
+         width="402" height="668" fetchpriority="high">
   </div>
 </div>
 
@@ -333,6 +478,47 @@
   </ul>
 </section>
 
+<section id="faq">
+  <h2><span data-l="en">Questions</span><span data-l="es">Preguntas</span></h2>
+  <!-- One <h3> and one <p> per answer: docs/_build.py reads these into the FAQPage JSON-LD. -->
+  <div class="faq" data-l="en">
+    <div><h3>How do I translate a Zoom, Meet or Teams call in real time?</h3>
+    <p>Pick headset mode and press Start. You speak your language and the other person hears a translated voice in theirs; they answer and you hear it in yours, in your earphones. It works in any app that uses the Windows default microphone, because chasqui swaps that microphone for a virtual cable while it runs and gives it back when you stop. You need the free VB-Audio Cable. Two-way calls are the newest part, so tell us how yours went.</p></div>
+    <div><h3>Can it translate a YouTube video or a livestream?</h3>
+    <p>Yes, that is media mode. It listens to whatever your PC is playing, YouTube, a Twitch stream, a lecture, a podcast, and speaks it in your language while it plays, with the transcript in the window. It costs about $3 an hour.</p></div>
+    <div><h3>Is chasqui free?</h3>
+    <p>The app is free and open source (MIT). The translation itself runs on OpenAI with your own API key: $0.051 per minute of audio for one direction ($0.034 translation plus $0.017 transcription), $0.102 for a two-way call. There is no subscription and no account with us, and the window shows the running cost while you talk.</p></div>
+    <div><h3>How long is the delay?</h3>
+    <p>Usually a second or two behind the speaker: we measured about 1.6 seconds from the original words to the translated voice. The model waits for a few seconds of audio after a sentence to finish it, so the last words of a turn can come a little later.</p></div>
+    <div><h3>Which languages does it translate?</h3>
+    <p>Twelve, in any direction between them: English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian and Hindi.</p></div>
+    <div><h3>Does my audio go through your servers?</h3>
+    <p>No. chasqui connects straight from your PC to the OpenAI Realtime API with your key. There is no chasqui server, account or analytics in between, and OpenAI's API data policies apply to the audio.</p></div>
+    <div><h3>Does it work on Mac or Linux?</h3>
+    <p>Not for audio yet. Calls and video translation need Windows 10 or 11, because chasqui switches Windows audio devices for you. On Linux and macOS the text mode works with pip install chasqui-translate.</p></div>
+    <div><h3>Why does Windows warn me about the installer?</h3>
+    <p>Because it is new and not code-signed yet, so Microsoft has not seen the file often. The warning means "unknown", not "harmful". The installer is built from the public source code by GitHub Actions, and you can read every line on GitHub.</p></div>
+  </div>
+  <div class="faq" data-l="es">
+    <div><h3>¿Cómo traduzco una llamada de Zoom, Meet o Teams en tiempo real?</h3>
+    <p>Elegí el modo headset y apretá Start. Hablás en tu idioma y la otra persona escucha una voz traducida en el suyo; te contesta y vos lo escuchás en el tuyo, en los auriculares. Anda en cualquier app que use el micrófono por defecto de Windows, porque chasqui lo cambia por un cable virtual mientras corre y lo devuelve al parar. Necesitás VB-Audio Cable, que es gratis. Las llamadas de ida y vuelta son lo más nuevo, así que contanos cómo te fue.</p></div>
+    <div><h3>¿Puede traducir un video de YouTube o un stream en vivo?</h3>
+    <p>Sí, es el modo media. Escucha lo que esté sonando en tu PC, YouTube, un stream de Twitch, una clase, un podcast, y lo dice en tu idioma mientras se reproduce, con la transcripción en la ventana. Cuesta unos $3 por hora.</p></div>
+    <div><h3>¿chasqui es gratis?</h3>
+    <p>La app es gratis y de código abierto (MIT). La traducción corre en OpenAI con tu propia API key: US$0.051 por minuto de audio en una dirección ($0.034 de traducción más $0.017 de transcripción), US$0.102 en una llamada de ida y vuelta. No hay suscripción ni cuenta con nosotros, y la ventana te muestra el costo mientras hablás.</p></div>
+    <div><h3>¿Cuánta demora tiene?</h3>
+    <p>En general uno o dos segundos detrás de quien habla: medimos unos 1,6 segundos desde las palabras originales hasta la voz traducida. El modelo espera unos segundos de audio después de una frase para terminarla, así que las últimas palabras de un turno pueden llegar un poco más tarde.</p></div>
+    <div><h3>¿Qué idiomas traduce?</h3>
+    <p>Doce, en cualquier dirección entre ellos: inglés, español, portugués, francés, alemán, italiano, japonés, coreano, mandarín, árabe, ruso e hindi.</p></div>
+    <div><h3>¿Mi audio pasa por sus servidores?</h3>
+    <p>No. chasqui se conecta directo desde tu PC a la API Realtime de OpenAI con tu key. No hay servidor, cuenta ni analítica de chasqui en el medio, y al audio se le aplican las políticas de datos de la API de OpenAI.</p></div>
+    <div><h3>¿Funciona en Mac o Linux?</h3>
+    <p>Para audio todavía no. Las llamadas y la traducción de videos necesitan Windows 10 u 11, porque chasqui cambia los dispositivos de audio de Windows por vos. En Linux y macOS funciona el modo texto con pip install chasqui-translate.</p></div>
+    <div><h3>¿Por qué Windows me avisa al instalarlo?</h3>
+    <p>Porque es nuevo y todavía no está firmado, así que Microsoft vio poco el archivo. El aviso quiere decir "desconocido", no "dañino". El instalador se compila desde el código público con GitHub Actions, y podés leer cada línea en GitHub.</p></div>
+  </div>
+</section>
+
 <section>
   <h2><span data-l="en">Tell us how it went</span><span data-l="es">Contanos cómo te fue</span></h2>
   <p data-l="en">chasqui is young. The most useful thing you can do is use it for something real and tell us what happened, good or bad.</p>
@@ -354,24 +540,25 @@
 
 </div>
 <script>
-  var TITLES = {
-    en: ["chasqui · real-time voice translation", "Real-time voice translation on your desktop. Calls in any app, YouTube, streams. Open source, your own OpenAI key, about $0.05 a minute."],
-    es: ["chasqui · traducción de voz en tiempo real", "Traducción de voz en tiempo real en tu escritorio. Llamadas en cualquier app, YouTube, streams. Código abierto, tu propia API key de OpenAI, unos $0.05 por minuto."]
-  };
-  var ALTS = {
-    en: "The chasqui window: language pickers, mode, Start, and a live transcript with each line and its translation",
-    es: "La ventana de chasqui: idiomas, modo, Start y la transcripción en vivo con cada frase y su traducción"
-  };
-  function setLang(lang, remember) {
+  var META = JSON.parse(document.getElementById("i18n").textContent);
+  function setLang(lang) {
     document.documentElement.lang = lang;
-    document.title = TITLES[lang][0];
-    document.querySelector('meta[name="description"]').setAttribute("content", TITLES[lang][1]);
-    document.querySelector(".shot img").alt = ALTS[lang];
-    if (remember) { try { localStorage.setItem("chasqui-lang", lang); } catch (e) {} }
+    document.title = META[lang].title;
+    document.querySelector('meta[name="description"]').setAttribute("content", META[lang].description);
+    document.querySelector(".shot img").alt = META[lang].alt;
   }
-  setLang(document.documentElement.lang, false);
-  document.querySelectorAll(".langs button").forEach(function (b) {
-    b.addEventListener("click", function () { setLang(b.getAttribute("data-set"), true); });
+  setLang(document.documentElement.lang);
+  // The EN/ES links are real links, so crawlers find both URLs. A click
+  // remembers the choice; on the auto page, switching to its own URL's
+  // language (or from it) happens in place instead of reloading.
+  var auto = document.documentElement.hasAttribute("data-lang-auto");
+  document.querySelectorAll(".langs a").forEach(function (a) {
+    a.addEventListener("click", function (ev) {
+      var lang = a.getAttribute("data-set");
+      try { localStorage.setItem("chasqui-lang", lang); } catch (e) {}
+      if (auto && lang === "en") { ev.preventDefault(); setLang(lang); }
+      else if (!auto && lang === "es") { ev.preventDefault(); }
+    });
   });
 
   document.querySelectorAll("button.copy").forEach(function (b) {

@@ -1,0 +1,24 @@
+# chasqui
+
+> chasqui is a free, open-source (MIT) desktop app for Windows 10/11 that translates speech in real time: two-way voice calls in any app (Meet, Zoom, Teams, Discord) and any audio the PC plays (YouTube, streams, lectures). It runs on the OpenAI Realtime API with the user's own API key, at $0.051 per minute per direction.
+
+- Modes: `media` (what the PC plays → your ears, $0.051/min), `headset` (two-way call in any app; swaps the Windows default mic for a virtual cable while it runs, $0.102/min), `meet` (two-way call, virtual mic picked by hand inside the call app, $0.102/min).
+- Cost: $0.034/min for `gpt-realtime-translate` plus $0.017/min for `gpt-realtime-whisper` transcription, billed by OpenAI to the user's key. No subscription, no account with chasqui. Checked against a real OpenAI bill in October 2026.
+- Delay: about 1.6 seconds from the original words to the translated voice (measured October 2026).
+- Languages: English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian, Hindi.
+- Privacy: audio goes straight from the PC to OpenAI. There is no chasqui server.
+- Requirements: Windows 10/11; an OpenAI API key with access to `gpt-realtime-translate`; free VB-Audio Cable for calls. Linux and macOS: text mode only, for now.
+- Install: Windows installer (27 MB, no admin, not code-signed yet) or `pip install chasqui-translate`, then `chasqui ui`.
+
+## Links
+
+- [Landing page (English)](https://kvothesson.com/chasqui/)
+- [Landing page (Spanish)](https://kvothesson.com/chasqui/es/)
+- [Source code and README](https://github.com/kvothesson/chasqui)
+- [Releases and Windows installer](https://github.com/kvothesson/chasqui/releases)
+- [PyPI package](https://pypi.org/project/chasqui-translate/)
+
+## Optional
+
+- [Report a bug](https://github.com/kvothesson/chasqui/issues/new?template=bug.yml)
+- [Tell us what you used it for](https://github.com/kvothesson/chasqui/issues/new?template=used-it-for.yml)

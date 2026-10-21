@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "kvothesson"}]
-keywords = ["translation", "real-time", "speech", "ai", "interpreter", "realtime-api"]
+keywords = ["translation", "real-time", "speech", "voice", "translator", "interpreter", "live-translation", "speech-to-speech", "zoom", "google-meet", "windows", "openai", "realtime-api"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: End Users/Desktop",
@@ -37,7 +37,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kvothesson/chasqui"
+Homepage = "https://kvothesson.com/chasqui/"
+Source = "https://github.com/kvothesson/chasqui"
 Issues = "https://github.com/kvothesson/chasqui/issues"
 
 [project.scripts]
