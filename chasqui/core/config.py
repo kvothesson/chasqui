@@ -139,8 +139,8 @@ class Config:
     def validate(self) -> None:
         if not self.api_key:
             raise ValueError(
-                "No API key found. Set OPENAI_API_KEY env var "
-                "or add 'api.key' to your chasqui.yaml."
+                "No API key found. Open the window (chasqui ui) to set one up, "
+                "set the OPENAI_API_KEY env var, or add 'api.key' to your chasqui.yaml."
             )
 
 
@@ -155,7 +155,14 @@ def _resolve_env(value: str) -> str:
 def load_config(path: Optional[str | Path] = None) -> Config:
     """Load config from an explicit path, the auto-detected one, or defaults."""
     resolved = Path(path) if path else find_config()
-    return Config.from_yaml(resolved) if resolved else Config()
+    cfg = Config.from_yaml(resolved) if resolved else Config()
+    if not cfg.api_key:
+        # Last resort, after the yaml and OPENAI_API_KEY: the key the setup
+        # window saved. A project chasqui.yaml with `key: ${OPENAI_API_KEY}`
+        # and no env var would otherwise hide it from an installed chasqui.
+        from .firstrun import stored_api_key
+        cfg.api_key = stored_api_key()
+    return cfg
 
 
 def find_config() -> Optional[Path]:

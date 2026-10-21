@@ -80,7 +80,7 @@ AUTO = "Auto"
 
 # One wording for the missing key, used at startup and again if Start is
 # pressed anyway. Two phrasings of the same problem read as two problems.
-NO_API_KEY = "No API key. Set OPENAI_API_KEY, or api.key in chasqui.yaml, then press Start."
+NO_API_KEY = "No API key yet. Press SETUP to add one."
 
 # Palette. Dark on purpose: the log is the centre of the window and reads like
 # a console, and the app is meant to sit next to a call, not compete with it.
@@ -219,6 +219,12 @@ class ChasquiApp:
         self._load_settings()
         self._on_adapter_change()
         self._tick()
+        self._wizard = None
+        # A fresh install has no key and nothing else would tell the user
+        # where one goes, so the setup window opens by itself. After the
+        # first paint, so it has a window to sit over.
+        if not self.base_config.api_key:
+            self.root.after(300, self._open_setup)
 
     # ------------------------------------------------------------------
     # Layout
@@ -269,7 +275,7 @@ class ChasquiApp:
         except Exception:
             pass   # cosmetic, and older Windows simply does not have it
 
-    def _panel(self):
+    def _panel(self, parent=None):
         """A panel with the ice stripe down its left edge.
 
         Returns (wrapper, inner): grid the wrapper, fill the inner. The stripe
@@ -279,7 +285,7 @@ class ChasquiApp:
         """
         from tkinter import ttk
 
-        wrapper = ttk.Frame(self.outer, style="Panel.TFrame")
+        wrapper = ttk.Frame(parent or self.outer, style="Panel.TFrame")
         wrapper.columnconfigure(1, weight=1)
         wrapper.rowconfigure(0, weight=1)
         stripe = self.tk.Frame(wrapper, bg=C_SPINE, width=2, bd=0, highlightthickness=0)
@@ -581,6 +587,10 @@ class ChasquiApp:
         self.btn_details = ttk.Button(
             outer, text="▸ BUFFER", style="Link.TButton", command=self._toggle_details)
         self.btn_details.grid(row=5, column=0, sticky="w", pady=(2, 0))
+        # Same row, other end: the way back into the setup window, for a new
+        # key or after installing the cable.
+        ttk.Button(outer, text="SETUP", style="Link.TButton", command=self._open_setup).grid(
+            row=5, column=0, sticky="e", pady=(2, 0))
 
         # --- log (built always, shown only in Details) ------------------
         # Built up front so lines accumulate while hidden and are all there
@@ -850,7 +860,7 @@ class ChasquiApp:
             self.runner.start(self._build_config())
         except ValueError:                 # missing API key
             self._log(NO_API_KEY, ERROR)
-            self._set_state("error")
+            self._open_setup()
         except Exception as e:
             self._log(f"Could not start: {e}", ERROR)
             self._set_state("error")
@@ -868,6 +878,30 @@ class ChasquiApp:
         except ValueError as e:
             self._log(str(e), ERROR)
             self._set_state("error")
+
+    def _open_setup(self) -> None:
+        if self._wizard is not None:
+            self._wizard.win.lift()
+            return
+        if self.runner.is_busy:
+            return
+        from .wizard import SetupWizard
+
+        self._wizard = SetupWizard(self, self.base_config.model, self._setup_closed)
+
+    def _setup_closed(self, ping: bool) -> None:
+        self._wizard = None
+        self.base_config = load_config(self.config_path)   # pick up the saved key
+        if not self.base_config.api_key:
+            self._log(NO_API_KEY, WARN)
+            return
+        self._log("Setup saved.", ACCENT)
+        if ping:
+            # Open the buffer: the ping's PASS/FAIL is written there, and a
+            # first run that ends in silence looks like nothing happened.
+            if not self.var_details.get():
+                self._toggle_details()
+            self._on_check()
 
     def _clear_log(self) -> None:
         self.log.configure(state="normal")
