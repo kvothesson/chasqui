@@ -28,10 +28,13 @@ def test_both_languages_have_the_same_questions():
 
 
 def test_json_ld_parses_and_names_the_installer_version():
+    # The link is version-free (latest/download); the version is the package's.
+    import chasqui
     for lang in ("en", "es"):
         data = json.loads(json.dumps(landing.json_ld(_source(), lang)))
         app = data["@graph"][0]
-        assert app["softwareVersion"] in app["downloadUrl"]
+        assert app["softwareVersion"] == chasqui.__version__
+        assert app["downloadUrl"].endswith("/releases/latest/download/chasqui-setup.exe")
 
 
 def test_spanish_page_points_assets_one_level_up():

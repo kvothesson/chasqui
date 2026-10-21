@@ -60,7 +60,15 @@ META = {
 }
 
 HEAD_RE = re.compile(r"(<!-- head:start[^>]*-->\n).*?(<!-- head:end -->)", re.S)
-DOWNLOAD_RE = re.compile(r"releases/download/v([\w.]+)/chasqui-setup-[\w.]+\.exe")
+# The installer link never names a version: the release workflow attaches a
+# copy called chasqui-setup.exe, and latest/download follows the newest release.
+DOWNLOAD_RE = re.compile(r"releases/latest/download/chasqui-setup\.exe")
+
+
+def version() -> str:
+    """The package version, the same number the release tag must match."""
+    init = (DOCS.parent / "chasqui" / "__init__.py").read_text(encoding="utf-8")
+    return re.search(r'__version__ = "(.+)"', init)[1]
 
 
 def _text(fragment: str) -> str:
@@ -91,7 +99,7 @@ def json_ld(page: str, lang: str) -> dict:
         "applicationCategory": "MultimediaApplication",
         "applicationSubCategory": "Real-time speech translation",
         "operatingSystem": "Windows 10, Windows 11",
-        "softwareVersion": download.group(1),
+        "softwareVersion": version(),
         "downloadUrl": "https://github.com/kvothesson/chasqui/" + download.group(0),
         "fileSize": "27 MB",
         "license": "https://opensource.org/licenses/MIT",

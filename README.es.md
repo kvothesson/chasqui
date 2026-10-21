@@ -22,7 +22,7 @@ Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 
 ### Windows: el instalador
 
-**[Descargar chasqui-setup-0.2.0.exe](https://github.com/kvothesson/chasqui/releases/download/v0.2.0/chasqui-setup-0.2.0.exe)** (27 MB, Windows 10/11, 64 bits).
+**[Descargar chasqui para Windows](https://github.com/kvothesson/chasqui/releases/latest/download/chasqui-setup.exe)**, siempre la última versión (27 MB, Windows 10/11, 64 bits).
 
 Sin Python y sin pedir permisos de administrador. Se instala para tu usuario,
 agrega una entrada en el menú Inicio y abre chasqui, que en el primer arranque

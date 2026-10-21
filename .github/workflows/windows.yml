@@ -89,6 +89,11 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: chasqui-setup
-      - run: gh release upload "$GITHUB_REF_NAME" chasqui-setup-*.exe --clobber --repo "$GITHUB_REPOSITORY"
+      # Twice: the versioned file, and the same bytes as chasqui-setup.exe, so
+      # releases/latest/download/chasqui-setup.exe (the landing and the
+      # READMEs) always serves the newest installer without editing a link.
+      - run: |
+          cp chasqui-setup-*.exe chasqui-setup.exe
+          gh release upload "$GITHUB_REF_NAME" chasqui-setup-*.exe chasqui-setup.exe --clobber --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
