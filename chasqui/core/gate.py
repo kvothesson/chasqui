@@ -13,7 +13,11 @@ things keep it from eating speech:
     savings, but nothing lost;
   - HOLD: after the last loud chunk it stays open this long, so pauses
     between words, and the tail the model needs to finish a sentence, still
-    go out;
+    go out. Measured with examples/gate_check.py: gpt-realtime-translate
+    only lets go of the END of a translation while audio keeps arriving.
+    With 1.5-2s of hold the last words of each sentence came out at the
+    start of the next one (in a call: only when you speak again); 3s gave
+    complete, aligned turns and still streamed ~half the minutes;
   - PRE-ROLL: while closed it keeps the last few hundred ms, and sends them
     first when speech resumes, so the opening consonant isn't clipped.
 
@@ -30,7 +34,7 @@ from .constants import SAMPLE_RATE, CHANNELS, SAMPLE_WIDTH
 BYTES_PER_MS = SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH // 1000   # 48
 
 DEFAULT_THRESHOLD_DBFS = -50.0
-DEFAULT_HOLD_MS = 1500
+DEFAULT_HOLD_MS = 3000
 DEFAULT_PREROLL_MS = 300
 
 

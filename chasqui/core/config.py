@@ -78,7 +78,7 @@ class Config:
     # Silence gate (core/gate.py): don't stream, or pay for, quiet audio.
     silence_gate: bool = False
     silence_gate_dbfs: float = -50.0
-    silence_gate_hold_ms: int = 1500
+    silence_gate_hold_ms: int = 3000
 
     # Passthrough: your original voice mixed under the translation the other
     # side hears, at this gain (0 = off, 0.15 is a good start).
