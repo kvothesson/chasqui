@@ -93,6 +93,7 @@ def run_check(
         api_key=config.api_key,
         model=config.model,
         on_translation=_on_translation,
+        isolate_turns=config.isolate_turns,
     )
 
     def _run():

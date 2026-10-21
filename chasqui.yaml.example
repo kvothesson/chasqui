@@ -1,6 +1,9 @@
 api:
   key: ${OPENAI_API_KEY}
   model: gpt-realtime-translate   # or gpt-realtime (higher quality, higher cost)
+  # isolate_turns: false          # gpt-realtime only. On by default: each turn is
+                                  # translated with no history, so short questions
+                                  # aren't answered (~0.5s slower)
 
 session:
   source_lang: es

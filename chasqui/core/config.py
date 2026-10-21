@@ -52,6 +52,7 @@ class Config:
     api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", ""))
     model: str = "gpt-realtime-translate"
     text_model: str = "gpt-4o-mini"   # Chat Completions model for the text adapter
+    isolate_turns: bool = True       # gpt-realtime: translate each turn with no history
 
     # Translation
     source_lang: str = "es"
@@ -90,6 +91,7 @@ class Config:
             cfg.api_key = _resolve_env(api.get("key", cfg.api_key))
             cfg.model = api.get("model", cfg.model)
             cfg.text_model = api.get("text_model", cfg.text_model)
+            cfg.isolate_turns = api.get("isolate_turns", cfg.isolate_turns)
 
         if session := d.get("session"):
             cfg.source_lang = session.get("source_lang", cfg.source_lang)
