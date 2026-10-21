@@ -291,6 +291,11 @@ If CABLE devices are not detected automatically, set `device.speaker` in `chasqu
   is installed `-Scope AllUsers`: the build step runs under pwsh 7, whose
   PSModulePath leaks into the `powershell` 5.1 that `build_windows.py` spawns
   and hides the CurrentUser module folder (first CI run failed on exactly that).
+- **Download links never name a version.** The release job attaches the
+  installer twice, `chasqui-setup-<version>.exe` and the same bytes as
+  `chasqui-setup.exe`, and the landing and READMEs point at
+  `releases/latest/download/chasqui-setup.exe`. The landing's JSON-LD reads
+  `softwareVersion` from `chasqui/__init__.py`. (v0.3.0 got its copy by hand.)
 
 ---
 
