@@ -44,11 +44,14 @@ jobs:
 
       # build_windows.py copies this module into the app. Pinned so a new
       # upstream release cannot change what ships without a commit here.
+      # AllUsers, not CurrentUser: the build step runs under pwsh 7, whose
+      # PSModulePath leaks into the powershell 5.1 that build_windows.py
+      # spawns and hides Documents\WindowsPowerShell\Modules from it.
       - name: AudioDeviceCmdlets
         shell: powershell
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module AudioDeviceCmdlets -RequiredVersion 3.1.0.2 -Scope CurrentUser -Force
+          Install-Module AudioDeviceCmdlets -RequiredVersion 3.1.0.2 -Scope AllUsers -Force
 
       - name: Inno Setup
         shell: powershell
