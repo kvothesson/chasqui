@@ -157,8 +157,11 @@ def test_passthrough_does_not_pile_up_without_translation():
     assert len(dst.output) == 800 * BYTES_PER_MS
 
 
-def test_adapters_only_wrap_when_passthrough_is_on():
+def test_adapters_only_wrap_when_passthrough_is_on(monkeypatch):
     from chasqui.adapters.text import TextAdapter
+
+    # TextAdapter builds an OpenAI client, which refuses to exist without a key (CI has none).
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
 
     mic, app = BytesStream(), BytesStream()
     off = TextAdapter(Config())
