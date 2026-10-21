@@ -5,7 +5,7 @@
 
 Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 
-*[Read in English →](https://github.com/kvothesson/chasqui/blob/master/README.md)*
+**[kvothesson.com/chasqui](https://kvothesson.com/chasqui/?lang=es)** · *[Read in English →](https://github.com/kvothesson/chasqui/blob/master/README.md)*
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="La ventana de chasqui: dos idiomas, un modo, y Start" width="402">
@@ -26,9 +26,19 @@ te guía para cargar la API key (ver
 llamadas también necesitás [VB-Audio Cable](https://vb-audio.com/Cable/); la
 ventana de configuración te avisa si falta.
 
-El instalador todavía no está firmado, así que Windows SmartScreen va a decir
-"Windows protegió tu PC". Hacé clic en **Más información** y después en
-**Ejecutar de todas formas**.
+El instalador es nuevo y todavía no está firmado, así que vas a ver dos
+avisos. Los dos quieren decir "Microsoft todavía no vio mucho este archivo",
+no "este archivo es dañino":
+
+1. **Al bajarlo**, el navegador dice que "no se descarga habitualmente".
+   Edge: pasá el mouse sobre la descarga → **…** → **Conservar** → **Mostrar
+   más** → **Conservar de todos modos**. Chrome: **Conservar**.
+2. **Al abrirlo**, SmartScreen dice "Windows protegió tu PC". Hacé clic en
+   **Más información** y después en **Ejecutar de todas formas**.
+
+Se compila desde este repositorio con
+[GitHub Actions](https://github.com/kvothesson/chasqui/actions/workflows/windows.yml),
+no en la PC de nadie.
 
 ### Con Python
 
@@ -302,6 +312,23 @@ Medilo vos con `examples/drift_check.py`.
 pip install -e ".[dev]"
 pytest
 ```
+
+### Compilar la app de Windows
+
+```bash
+pip install -e . pyinstaller
+python packaging/build_windows.py
+```
+
+Genera `dist/chasqui/chasqui.exe` y, si tenés
+[Inno Setup 6](https://jrsoftware.org/isinfo.php), el instalador
+`dist/chasqui-setup-<versión>.exe`. Compilá desde un entorno virtual limpio:
+PyInstaller empaqueta todo lo que puede importar.
+
+Para un release no hace falta compilar a mano: al publicar un release en
+GitHub, `.github/workflows/windows.yml` compila el instalador en una máquina
+limpia y lo adjunta. Para una versión de prueba, corrélo a mano (Actions →
+Windows installer → Run workflow).
 
 En [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) está la arquitectura completa y en [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md)
 las notas para quien contribuya.

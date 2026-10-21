@@ -5,7 +5,7 @@
 
 Real-time simultaneous translation. Speak your language. Be understood.
 
-*[Leer en español →](https://github.com/kvothesson/chasqui/blob/master/README.es.md)*
+**[kvothesson.com/chasqui](https://kvothesson.com/chasqui/)** · *[Leer en español →](https://github.com/kvothesson/chasqui/blob/master/README.es.md)*
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="The chasqui window: two language pickers, a mode, and Start" width="402">
@@ -25,8 +25,19 @@ and opens chasqui, which walks you through the API key on its first run (see
 [VB-Audio Cable](https://vb-audio.com/Cable/); the setup window tells you if it
 is missing.
 
-The installer is not code-signed yet, so Windows SmartScreen will say
-"Windows protected your PC". Click **More info**, then **Run anyway**.
+The installer is new and not code-signed yet, so you will see two warnings.
+Both mean "Microsoft has not seen this file much yet", not "this file is
+harmful":
+
+1. **While downloading**, the browser says it "isn't commonly downloaded".
+   Edge: hover the download → **…** → **Keep** → **Show more** → **Keep
+   anyway**. Chrome: **Keep**.
+2. **When opening it**, SmartScreen says "Windows protected your PC". Click
+   **More info**, then **Run anyway**.
+
+It is built from this repository by
+[GitHub Actions](https://github.com/kvothesson/chasqui/actions/workflows/windows.yml),
+not on anyone's PC.
 
 ### With Python
 
