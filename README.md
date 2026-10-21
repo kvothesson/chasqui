@@ -324,6 +324,11 @@ Run workflow) to get a test build as a run artifact.
 
 See [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) for full architecture and [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md) for contributor/agent notes.
 
+## Acknowledgements
+
+The silence gate and the voice passthrough ideas come from
+[meetdub](https://github.com/Yarta-AI/meetdub) (MIT).
+
 ## License
 
 MIT

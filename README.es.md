@@ -333,6 +333,11 @@ Windows installer → Run workflow).
 En [SPEC.md](https://github.com/kvothesson/chasqui/blob/master/SPEC.md) está la arquitectura completa y en [AGENTS.md](https://github.com/kvothesson/chasqui/blob/master/AGENTS.md)
 las notas para quien contribuya.
 
+## Agradecimientos
+
+Las ideas del silence gate y del passthrough de voz vienen de
+[meetdub](https://github.com/Yarta-AI/meetdub) (MIT).
+
 ## Licencia
 
 MIT
