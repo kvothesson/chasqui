@@ -29,6 +29,11 @@ DOCS = Path(__file__).resolve().parent
 SITE = "https://kvothesson.com/chasqui/"
 URLS = {"en": SITE, "es": SITE + "es/"}
 LOCALES = {"en": "en_US", "es": "es_LA"}
+# GoatCounter (no cookies, no banner): the code of the account, e.g. "kvothesson"
+# for kvothesson.goatcounter.com. Empty = no analytics script at all. It reads
+# ?ref= from the URL as the source, so each launch post links with its own ref;
+# data-goatcounter-click on the download link and the play buttons counts those.
+GOATCOUNTER = "kvothesson"
 
 META = {
     "en": {
@@ -167,6 +172,9 @@ def head(page: str, lang: str) -> str:
         f'<script type="application/ld+json">\n{ld}\n</script>',
         f'<script type="application/json" id="i18n">{i18n}</script>',
     ]
+    if GOATCOUNTER:
+        lines.append(f'<script data-goatcounter="https://{GOATCOUNTER}.goatcounter.com/count" '
+                     'async src="//gc.zgo.at/count.js"></script>')
     return "\n".join(lines) + "\n"
 
 
