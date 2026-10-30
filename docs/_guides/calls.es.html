@@ -1,0 +1,51 @@
+title: Cómo traducir llamadas de Zoom, Meet y Teams en tiempo real
+description: Hablá con alguien en otro idioma por Zoom, Google Meet, Teams o Discord. Vos hablás en el tuyo, te escuchan en el suyo y solo vos instalás algo. US$0.102 por minuto.
+h1: Cómo traducir una llamada de Zoom, Meet o Teams en tiempo real
+tag: Traducción de llamadas en vivo
+link: Traducir llamadas de Zoom, Meet y Teams
+---
+<p class="lede">Hablás en tu idioma y la otra persona escucha una voz traducida en el suyo. Te contesta y vos lo escuchás en el tuyo, en los auriculares. Solo vos instalás chasqui: la otra persona entra a la llamada como siempre.</p>
+
+<div class="note">
+  <b>En qué estado está.</b> La traducción de ida y vuelta se probó de punta a punta con ChatGPT Voice en Windows, en las dos direcciones. Todavía no tenemos ningún reporte de una llamada real en Meet, Zoom o Teams con una persona del otro lado. Usa los mismos dispositivos de audio de Windows, pero probalo antes de una llamada importante y <a href="https://github.com/kvothesson/chasqui/issues/new?template=used-it-for.yml">contanos cómo te fue</a>.
+</div>
+
+<h2>Qué necesitás</h2>
+<ul>
+  <li>Windows 10 u 11 y auriculares. Con parlantes, el micrófono capta la traducción y se forma un bucle.</li>
+  <li><a href="{windows}">chasqui</a> y una API key de OpenAI con acceso a <code>gpt-realtime-translate</code>.</li>
+  <li><a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> (gratis), que lleva tu voz traducida a la llamada.</li>
+  <li>Una forma de capturar lo que dice la otra persona: <b>Stereo Mix</b> activado en Windows, o un segundo cable como <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>. Sin eso, solo se traduce tu lado.</li>
+</ul>
+
+<h2>Paso a paso</h2>
+<ol>
+  <li>Abrí chasqui. La primera vez, la ventana de configuración revisa tu key, el cable y el cambiador de dispositivos.</li>
+  <li>Elegí tu idioma en el cuadro izquierdo (<b>I SPEAK</b>) y el de la otra persona en el derecho (<b>THEY SPEAK</b>).</li>
+  <li>Elegí el modo <b>Headset</b> y apretá <b>START</b>. Esperá a que la luz diga <b>ON ROUTE</b>.</li>
+  <li>Entrá a la llamada. La app tiene que usar el micrófono por defecto de Windows: si tiene uno específico elegido, cambialo por el predeterminado o por <b>CABLE Output</b>.</li>
+  <li>Al terminar, apretá <b>STOP</b> o cerrá la ventana. chasqui te devuelve el micrófono y la salida de Windows.</li>
+</ol>
+<p>¿Preferís que no toque los valores por defecto de Windows? El modo <b>Meet</b> los deja como están: dentro de la app de la llamada elegís <b>CABLE Output</b> como micrófono y tu segundo cable como parlante.</p>
+
+<h2>Si la otra persona no escucha nada</h2>
+<p>Las apps de llamadas pueden tomar una voz sintetizada como ruido y filtrarla. El turno aparece en el registro de chasqui, pero del otro lado se escucha silencio. Poné la supresión de ruido en <b>Baja</b> o <b>Desactivada</b>:</p>
+<table>
+  <thead><tr><th>App</th><th>Dónde está</th></tr></thead>
+  <tbody>
+    <tr><td>Google Meet</td><td>Configuración &gt; Audio &gt; Cancelación de ruido</td></tr>
+    <tr><td>Microsoft Teams</td><td>Configuración &gt; Dispositivos &gt; Supresión de ruido</td></tr>
+    <tr><td>Zoom</td><td>Configuración &gt; Audio &gt; Supresión de ruido de fondo</td></tr>
+  </tbody>
+</table>
+
+<h2>Cuánto cuesta</h2>
+<p>Una llamada usa dos streams de traducción, uno por dirección, así que cuesta <b>US$0.102 por minuto</b>: US$3.06 por 30 minutos y US$6.12 por hora. OpenAI se lo cobra a tu propia key. No hay suscripción, y la ventana te muestra el total mientras hablás.</p>
+
+<h2>Qué esperar</h2>
+<ul>
+  <li><b>Demora:</b> en general uno o dos segundos. Medimos unos 1,6 segundos desde las palabras originales hasta la voz traducida, y las últimas palabras de un turno pueden llegar un poco más tarde.</li>
+  <li><b>Errores:</b> a veces el modelo contesta una frase corta en vez de traducirla, así que un "¿Llegaste bien?" puede volver como respuesta. Las frases largas aguantan mejor. La ventana muestra los dos lados, así que podés darte cuenta.</li>
+  <li><b>Privacidad:</b> el audio de las dos personas va de tu PC a OpenAI, sin ningún servidor de chasqui en el medio. Avisale a la otra persona que estás usando un traductor.</li>
+  <li><b>Idiomas:</b> inglés, español, portugués, francés, alemán, italiano, japonés, coreano, mandarín, árabe, ruso e hindi.</li>
+</ul>

@@ -7,7 +7,9 @@ this script:
 
 - fills the block between the head markers in docs/index.html with the
   English title, description, canonical, hreflang, Open Graph and JSON-LD;
-- writes docs/es/index.html: the same page, Spanish fixed, Spanish head.
+- writes docs/es/index.html: the same page, Spanish fixed, Spanish head;
+- writes one page per guide and language from docs/_guides/, with the landing's
+  CSS. A guide is one language per file, so what a search finds is what it reads.
 
 The FAQPage JSON-LD is read from the visible FAQ, so the two cannot disagree.
 GitHub Pages serves docs/ as it is (Jekyll skips names starting with "_").
@@ -63,6 +65,35 @@ META = {
         "og_alt": "chasqui, traducción de voz en tiempo real para Windows, junto a su ventana con la transcripción en vivo",
     },
 }
+
+# What people search for, one URL per language. Text: docs/_guides/<key>.<lang>.html
+# (header lines, then ---, then the body). In a body, {calls}, {media} and
+# {windows} are relative links to the other guides of the same language.
+# The root sitemap lives in kvothesson.github.io: a new URL goes there too.
+GUIDES = {
+    "calls": {"en": "translate-calls", "es": "traducir-llamadas"},
+    "media": {"en": "translate-youtube", "es": "traducir-youtube"},
+    "windows": {"en": "windows-voice-translator", "es": "traductor-de-voz-windows"},
+}
+GUIDE_TEXT = {
+    "en": {
+        "download": "DOWNLOAD FOR WINDOWS",
+        "note": "Free and open source. You pay OpenAI by the minute, with your own key.",
+        "more": "More guides",
+        "home": "Everything about chasqui",
+        "license": "MIT licensed",
+        "disclaimer": "Not affiliated with OpenAI.",
+    },
+    "es": {
+        "download": "DESCARGAR PARA WINDOWS",
+        "note": "Gratis y de código abierto. Le pagás a OpenAI por minuto, con tu propia key.",
+        "more": "Más guías",
+        "home": "Todo sobre chasqui",
+        "license": "Licencia MIT",
+        "disclaimer": "Sin relación con OpenAI.",
+    },
+}
+INSTALLER = "https://github.com/kvothesson/chasqui/releases/latest/download/chasqui-setup.exe"
 
 HEAD_RE = re.compile(r"(<!-- head:start[^>]*-->\n).*?(<!-- head:end -->)", re.S)
 # The installer link never names a version: the release workflow attaches a
@@ -185,8 +216,138 @@ def _swap(page: str, old: str, new: str, count: int = 1) -> str:
     return page.replace(old, new)
 
 
+def guide_url(key: str, lang: str) -> str:
+    return URLS[lang] + GUIDES[key][lang] + "/"
+
+
+def guide_source(key: str, lang: str) -> tuple[dict[str, str], str]:
+    """Returns (header fields, body) of a guide."""
+    text = (DOCS / "_guides" / f"{key}.{lang}.html").read_text(encoding="utf-8")
+    header, body = text.split("\n---\n", 1)
+    return dict(line.split(": ", 1) for line in header.splitlines()), body.strip()
+
+
+def guide_head(key: str, lang: str, fields: dict[str, str], root: str) -> str:
+    a = html.escape
+    url = guide_url(key, lang)
+    other = "es" if lang == "en" else "en"
+    image = SITE + f"img/og-{lang}.png"
+    ld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebPage",
+                "@id": url,
+                "url": url,
+                "name": fields["title"],
+                "description": fields["description"],
+                "inLanguage": lang,
+                "about": {"@id": SITE + "#app"},
+                "primaryImageOfPage": image,
+            },
+            {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "chasqui", "item": URLS[lang]},
+                    {"@type": "ListItem", "position": 2, "name": fields["link"], "item": url},
+                ],
+            },
+        ],
+    }
+    ld_text = json.dumps(ld, ensure_ascii=False, indent=1).replace("</", "<\\/")
+    lines = [
+        f"<title>{a(fields['title'])}</title>",
+        f'<meta name="description" content="{a(fields["description"])}">',
+        f'<link rel="canonical" href="{url}">',
+        f'<link rel="alternate" hreflang="en" href="{guide_url(key, "en")}">',
+        f'<link rel="alternate" hreflang="es" href="{guide_url(key, "es")}">',
+        f'<link rel="alternate" hreflang="x-default" href="{guide_url(key, "en")}">',
+        '<meta property="og:type" content="article">',
+        '<meta property="og:site_name" content="chasqui">',
+        f'<meta property="og:url" content="{url}">',
+        f'<meta property="og:title" content="{a(fields["title"])}">',
+        f'<meta property="og:description" content="{a(fields["description"])}">',
+        f'<meta property="og:locale" content="{LOCALES[lang]}">',
+        f'<meta property="og:locale:alternate" content="{LOCALES[other]}">',
+        f'<meta property="og:image" content="{image}">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        f'<script type="application/ld+json">\n{ld_text}\n</script>',
+        '<meta name="theme-color" content="#0b0e14">',
+        f'<link rel="icon" href="{root}favicon.svg" type="image/svg+xml">',
+        f'<link rel="apple-touch-icon" href="{root}img/icon-180.png">',
+    ]
+    if GOATCOUNTER:
+        lines.append(f'<script data-goatcounter="https://{GOATCOUNTER}.goatcounter.com/count" '
+                     'async src="//gc.zgo.at/count.js"></script>')
+    return "\n".join(lines)
+
+
+def guide_page(source: str, key: str, lang: str) -> str:
+    fields, body = guide_source(key, lang)
+    t = GUIDE_TEXT[lang]
+    root = "../" if lang == "en" else "../../"
+    for name in GUIDES:
+        body = body.replace("{" + name + "}", f"../{GUIDES[name][lang]}/")
+    style = re.search(r"<style>.*?</style>", source, re.S).group(0)
+    brand = re.search(r'<a class="brand".*?</a>', source, re.S).group(0).replace('href="#"', 'href="../"')
+    more = "\n".join(
+        f'    <li><a href="../{GUIDES[name][lang]}/">{html.escape(guide_source(name, lang)[0]["link"])}</a></li>'
+        for name in GUIDES if name != key
+    )
+    download = (
+        f'<a class="download" href="{INSTALLER}" data-goatcounter-click="descarga-guia-{key}" '
+        f'data-goatcounter-title="Descarga desde la guía {key}">{t["download"]}</a>\n'
+        f'    <p class="dlnote">{t["note"]}</p>'
+    )
+    return f"""<!doctype html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Written by docs/_build.py from docs/_guides/{key}.{lang}.html: edit it there -->
+{guide_head(key, lang, fields, root)}
+{style}
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  {brand}
+  <nav>
+    <a class="opt" href="https://github.com/kvothesson/chasqui">GITHUB</a>
+    <div class="langs" role="group" aria-label="Language / Idioma">
+      <a href="{guide_url(key, "en")}" data-set="en" hreflang="en" lang="en">EN</a>
+      <a href="{guide_url(key, "es")}" data-set="es" hreflang="es" lang="es">ES</a>
+    </div>
+  </nav>
+</header>
+
+<main class="guide">
+  <h1><span class="tag">{html.escape(fields["tag"])}</span>{html.escape(fields["h1"])}</h1>
+{body}
+  <div class="cta">
+    {download}
+  </div>
+  <h2>{t["more"]}</h2>
+  <ul>
+{more}
+    <li><a href="../">{t["home"]}</a></li>
+  </ul>
+</main>
+
+<footer>
+  <p>{t["license"]} · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a></p>
+  <p>{t["disclaimer"]}</p>
+</footer>
+
+</div>
+</body>
+</html>
+"""
+
+
 def build(source: str) -> dict[str, str]:
-    """Returns {relative path: content} for both pages, from docs/index.html."""
+    """Returns {relative path: content} for every page, from docs/index.html."""
     if HEAD_RE.search(source) is None:
         raise SystemExit("head markers not found in docs/index.html")
     en = HEAD_RE.sub(lambda mt: mt.group(1) + head(source, "en") + mt.group(2), source, count=1)
@@ -195,14 +356,18 @@ def build(source: str) -> dict[str, str]:
     es = _swap(es, f'alt="{META["en"]["alt"]}"', f'alt="{META["es"]["alt"]}"')
     es = _swap(es, 'href="favicon.svg"', 'href="../favicon.svg"')
     es = es.replace('="img/', '="../img/')
-    return {"index.html": en, "es/index.html": es}
+    pages = {"index.html": en, "es/index.html": es}
+    for key, slugs in GUIDES.items():
+        pages[f"{slugs['en']}/index.html"] = guide_page(source, key, "en")
+        pages[f"es/{slugs['es']}/index.html"] = guide_page(source, key, "es")
+    return pages
 
 
 def main() -> int:
     source = (DOCS / "index.html").read_text(encoding="utf-8")
     for rel, content in build(source).items():
         path = DOCS / rel
-        path.parent.mkdir(exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         old = path.read_text(encoding="utf-8") if path.exists() else None
         if old != content:
             path.write_text(content, encoding="utf-8", newline="\n")

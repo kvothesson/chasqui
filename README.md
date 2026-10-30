@@ -26,7 +26,7 @@ Real-time simultaneous translation. Speak your language. Be understood.
 
 No Python, no admin prompt. It installs for your user, adds a Start menu entry,
 and opens chasqui, which walks you through the API key on its first run (see
-[First run](#first-run-the-setup-window)). For calls you also need
+[First run](#first-run-the-setup-window)). For videos and calls you also need
 [VB-Audio Cable](https://vb-audio.com/Cable/); the setup window tells you if it
 is missing.
 
@@ -136,7 +136,8 @@ itself. It checks three things and says, for each, whether it is ready:
    the key can use the model it is about to run, and saves it to
    `~/.chasqui/config.yaml`. A key in `OPENAI_API_KEY` or in a `chasqui.yaml`
    still wins over the saved one.
-2. **VB-Audio Cable**, which the call modes need. A link if it is missing.
+2. **VB-Audio Cable**, which the call and media modes need. A link if it is missing.
+   Headset also needs Stereo Mix or Hi-Fi Cable to hear the other side.
 3. **The device switcher** (the AudioDeviceCmdlets PowerShell module), which
    the headset and media modes use to move your Windows devices.
 

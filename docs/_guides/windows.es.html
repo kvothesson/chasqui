@@ -1,0 +1,49 @@
+title: Traductor de voz en tiempo real para Windows: instalación y requisitos
+description: Instalá chasqui, un traductor de voz gratis y de código abierto para Windows 10 y 11. Qué necesita cada modo, cómo configurar VB-Audio Cable y tu key de OpenAI, y cómo resolver problemas comunes.
+h1: Traductor de voz en tiempo real para Windows: cómo configurarlo
+tag: Guía de instalación
+link: Configurar el traductor de voz en Windows
+---
+<p class="lede">chasqui es una app gratis y de código abierto para Windows que traduce la voz mientras habla la gente. La app no cuesta nada: le pagás a OpenAI por minuto con tu propia API key. Esta página explica qué instalar y qué hacer cuando algo no anda.</p>
+
+<h2>Qué necesita cada modo</h2>
+<table>
+  <thead><tr><th>Modo</th><th>Para</th><th>Además de la key de OpenAI</th><th class="n">Por min</th></tr></thead>
+  <tbody>
+    <tr><td><a href="{media}">Media</a></td><td>YouTube, streams, lo que suene</td><td>VB-Audio Cable</td><td class="n">US$0.051</td></tr>
+    <tr><td><a href="{calls}">Headset</a></td><td>Llamadas de ida y vuelta, cualquier app</td><td>VB-Audio Cable, más Stereo Mix o Hi-Fi Cable, más auriculares</td><td class="n">US$0.102</td></tr>
+    <tr><td><a href="{calls}">Meet</a></td><td>Llamadas de ida y vuelta, conectadas a mano</td><td>VB-Audio Cable, más un segundo cable, más auriculares</td><td class="n">US$0.102</td></tr>
+  </tbody>
+</table>
+
+<h2>Instalalo</h2>
+<ol>
+  <li>Bajá el instalador (27 MB, Windows 10/11, 64 bits). No necesita Python ni permisos de administrador.</li>
+  <li>Es nuevo y todavía no está firmado, así que vas a ver dos avisos, que quieren decir "Microsoft vio poco este archivo", no "este archivo es dañino". En el navegador, elegí <b>Conservar</b>. En "Windows protegió tu PC", elegí <b>Más información</b> y después <b>Ejecutar de todas formas</b>. El instalador se compila desde el código público con <a href="https://github.com/kvothesson/chasqui/actions/workflows/windows.yml">GitHub Actions</a>.</li>
+  <li>Instalá <a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> si tu modo lo necesita.</li>
+</ol>
+<p>Con Python 3.11 o más nuevo, también podés usar <code>pip install chasqui-translate</code> y después <code>chasqui ui</code>.</p>
+
+<h2>El primer arranque</h2>
+<p>Una ventana de configuración revisa tres cosas y te dice si cada una está lista:</p>
+<ol>
+  <li><b>Tu key de OpenAI.</b> Pegala y apretá <b>VERIFY</b>. chasqui le pregunta a OpenAI si la key puede usar el modelo.</li>
+  <li><b>VB-Audio Cable.</b> Si falta, te da el link.</li>
+  <li><b>El cambiador de dispositivos,</b> que mueve tus dispositivos de audio de Windows en los modos Headset y Media. El instalador ya lo trae.</li>
+</ol>
+<p><b>DONE · PING</b> cierra la ventana y corre una traducción de prueba. <b>SETUP</b>, debajo de START, la vuelve a abrir.</p>
+
+<h2>Activar Stereo Mix para las llamadas</h2>
+<p>El modo Headset necesita una forma de capturar la voz de la otra persona. Si tu placa de sonido tiene Stereo Mix: abrí la configuración de sonido de Windows, andá a la pestaña <b>Grabación</b>, hacé clic derecho, elegí <b>Mostrar dispositivos deshabilitados</b> y habilitá <b>Stereo Mix</b>. Muchas PC no lo tienen, y ahí la alternativa es <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>.</p>
+
+<h2>Cuando algo no anda</h2>
+<ul>
+  <li><b>La luz dice GLITCH:</b> abrí <b>BUFFER</b>. El motivo está en el registro.</li>
+  <li><b>Eligió el dispositivo equivocado:</b> abrí <b>BUFFER</b>, después <b>AUDIO DEVICES</b>, y elegilo por nombre. Apretá <b>RESCAN</b> después de enchufar algo.</li>
+  <li><b>La otra persona no escucha nada:</b> <a href="{calls}">bajá la supresión de ruido</a> en la app de la llamada.</li>
+  <li><b>El sonido de Windows quedó en el cable:</b> pará siempre con <b>STOP</b> o cerrando la ventana, que te devuelve los dispositivos. Si el proceso se cortó de golpe, volvelos a poner en la configuración de sonido de Windows.</li>
+  <li><b>Sigue sin andar:</b> <a href="https://github.com/kvothesson/chasqui/issues/new?template=bug.yml">abrí un issue</a> con lo que dice el registro.</li>
+</ul>
+
+<h2>Mac y Linux</h2>
+<p>Para audio todavía no: las llamadas y la traducción de videos necesitan Windows, porque chasqui cambia los dispositivos de audio de Windows por vos. El modo texto funciona en los dos con <code>pip install chasqui-translate</code>.</p>

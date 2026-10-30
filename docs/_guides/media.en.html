@@ -1,0 +1,42 @@
+title: Translate YouTube and live streams with voice, in real time
+description: Hear any YouTube video, stream, lecture or podcast in your language while it plays. A Windows app that translates what your PC is playing, about $3 an hour.
+h1: How to translate YouTube and live streams in real time
+tag: Live video translation
+link: Translate YouTube and live streams
+---
+<p class="lede">chasqui listens to whatever your PC is playing and speaks it in your language while it plays, with the transcript in its window. There is nothing to wait for and no file to upload, so it also works on live streams.</p>
+
+<h2>What you need</h2>
+<ul>
+  <li>Windows 10 or 11.</li>
+  <li><a href="{windows}">chasqui</a> and an OpenAI API key with access to <code>gpt-realtime-translate</code>.</li>
+  <li><a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> (free). chasqui sends your PC's sound through it to capture the audio.</li>
+</ul>
+
+<h2>Step by step</h2>
+<ol>
+  <li>Open chasqui. The first time, the setup window checks your key, the cable and the device switcher.</li>
+  <li>Choose your language in the left box (<b>I HEAR</b>) and the video's language in the right box (<b>THEY SPEAK</b>).</li>
+  <li>Pick <b>Media</b> mode and press <b>START</b>. Wait for the light to say <b>ON ROUTE</b>.</li>
+  <li>Play the video. You hear the translation instead of the original, because the PC's sound is going through the cable.</li>
+  <li>When you finish, press <b>STOP</b> or close the window. chasqui puts your Windows output back.</li>
+</ol>
+
+<h2>What it costs</h2>
+<table>
+  <thead><tr><th>What you watch</th><th class="n">Cost</th></tr></thead>
+  <tbody>
+    <tr><td>10 minute video</td><td class="n">$0.51</td></tr>
+    <tr><td>1 hour stream</td><td class="n">$3.06</td></tr>
+  </tbody>
+</table>
+<p>That is <b>$0.051 a minute</b>, billed by OpenAI to your own key. There is no subscription, and the window shows the running total.</p>
+
+<h2>What to expect</h2>
+<ul>
+  <li><b>What we tested:</b> YouTube videos and podcasts. chasqui captures the PC's sound rather than connecting to a site, so Twitch, lectures or a video player go through the same path. If you try one, <a href="https://github.com/kvothesson/chasqui/issues/new?template=used-it-for.yml">tell us how it went</a>.</li>
+  <li><b>Delay:</b> usually a second or two behind the speaker. The last words of a sentence can come a little later.</li>
+  <li><b>It hears everything:</b> notification sounds and any other tab playing also go in, and you pay for every minute it runs. Press STOP when you pause.</li>
+  <li><b>Languages:</b> English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian and Hindi.</li>
+</ul>
+<p>If subtitles are enough and the video has captions, YouTube's own auto-translate is free. chasqui is for when you want to listen, or when the stream is live and has none.</p>

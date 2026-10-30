@@ -1,0 +1,51 @@
+title: How to translate Zoom, Meet and Teams calls in real time
+description: Talk to someone in another language on Zoom, Google Meet, Teams or Discord. You speak yours, they hear theirs, and only you install anything. $0.102 a minute.
+h1: How to translate a Zoom, Meet or Teams call in real time
+tag: Live call translation
+link: Translate Zoom, Meet and Teams calls
+---
+<p class="lede">You speak your language and the other person hears a translated voice in theirs. They answer, and you hear it in yours through your headphones. Only you install chasqui: the other person joins the call as usual.</p>
+
+<div class="note">
+  <b>Where this stands.</b> Two-way translation was tested end to end with ChatGPT Voice on Windows, in both directions. We have no report yet from a real Meet, Zoom or Teams call with a person on the other side. It uses the same Windows audio devices, but please try it before a call that matters, and <a href="https://github.com/kvothesson/chasqui/issues/new?template=used-it-for.yml">tell us how it went</a>.
+</div>
+
+<h2>What you need</h2>
+<ul>
+  <li>Windows 10 or 11, and headphones. With open speakers, your mic picks up the translation and it loops.</li>
+  <li><a href="{windows}">chasqui</a> and an OpenAI API key with access to <code>gpt-realtime-translate</code>.</li>
+  <li><a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> (free), which carries your translated voice into the call.</li>
+  <li>A way to capture what the other person says: <b>Stereo Mix</b> turned on in Windows, or a second cable such as <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>. Without one, only your side gets translated.</li>
+</ul>
+
+<h2>Step by step</h2>
+<ol>
+  <li>Open chasqui. The first time, the setup window checks your key, the cable and the device switcher.</li>
+  <li>Choose your language in the left box (<b>I SPEAK</b>) and theirs in the right box (<b>THEY SPEAK</b>).</li>
+  <li>Pick <b>Headset</b> mode and press <b>START</b>. Wait for the light to say <b>ON ROUTE</b>.</li>
+  <li>Join the call. The app has to use the Windows default mic: if it has a specific mic selected, change it to the default one or to <b>CABLE Output</b>.</li>
+  <li>When you finish, press <b>STOP</b> or close the window. chasqui gives your Windows mic and output back.</li>
+</ol>
+<p>Prefer not to have your Windows defaults touched? <b>Meet</b> mode leaves them alone: inside the call app you set the mic to <b>CABLE Output</b> and the speaker to your second cable.</p>
+
+<h2>If the other person hears nothing</h2>
+<p>Call apps can treat a synthesized voice as noise and filter it out. The turn shows up in chasqui's log, but the other side hears silence. Set noise suppression to <b>Low</b> or <b>Off</b>:</p>
+<table>
+  <thead><tr><th>App</th><th>Setting</th></tr></thead>
+  <tbody>
+    <tr><td>Google Meet</td><td>Settings &gt; Audio &gt; Noise cancellation</td></tr>
+    <tr><td>Microsoft Teams</td><td>Settings &gt; Devices &gt; Noise suppression</td></tr>
+    <tr><td>Zoom</td><td>Settings &gt; Audio &gt; Background noise suppression</td></tr>
+  </tbody>
+</table>
+
+<h2>What it costs</h2>
+<p>A call runs two translation streams, one per direction, so it costs <b>$0.102 a minute</b>: $3.06 for 30 minutes, $6.12 for an hour. OpenAI bills it to your own key. There is no subscription, and the window shows the running total while you talk.</p>
+
+<h2>What to expect</h2>
+<ul>
+  <li><b>Delay:</b> usually a second or two. We measured about 1.6 seconds from the original words to the translated voice, and the last words of a turn can come a little later.</li>
+  <li><b>Mistakes:</b> the model sometimes answers a short phrase instead of translating it, so "Did you get there okay?" can come back as a reply. Longer sentences hold up better. The window shows both sides, so you can catch it.</li>
+  <li><b>Privacy:</b> the audio of both people goes from your PC to OpenAI, with no chasqui server in between. Tell the other person you are using a translator.</li>
+  <li><b>Languages:</b> English, Spanish, Portuguese, French, German, Italian, Japanese, Korean, Mandarin, Arabic, Russian and Hindi.</li>
+</ul>

@@ -1,0 +1,49 @@
+title: Real-time voice translator for Windows: setup and requirements
+description: Install chasqui, a free open-source voice translator for Windows 10 and 11. What each mode needs, how to set up VB-Audio Cable and your OpenAI key, and how to fix common problems.
+h1: Real-time voice translator for Windows: how to set it up
+tag: Setup guide
+link: Set up the voice translator on Windows
+---
+<p class="lede">chasqui is a free, open-source Windows app that translates speech as it happens. The app costs nothing: you pay OpenAI by the minute with your own API key. This page covers what to install and what to do when something does not work.</p>
+
+<h2>What each mode needs</h2>
+<table>
+  <thead><tr><th>Mode</th><th>For</th><th>Besides the OpenAI key</th><th class="n">Per min</th></tr></thead>
+  <tbody>
+    <tr><td><a href="{media}">Media</a></td><td>YouTube, streams, anything playing</td><td>VB-Audio Cable</td><td class="n">$0.051</td></tr>
+    <tr><td><a href="{calls}">Headset</a></td><td>Two-way calls, any app</td><td>VB-Audio Cable, plus Stereo Mix or Hi-Fi Cable, plus headphones</td><td class="n">$0.102</td></tr>
+    <tr><td><a href="{calls}">Meet</a></td><td>Two-way calls, wired by hand</td><td>VB-Audio Cable, plus a second cable, plus headphones</td><td class="n">$0.102</td></tr>
+  </tbody>
+</table>
+
+<h2>Install it</h2>
+<ol>
+  <li>Download the installer (27 MB, Windows 10/11, 64-bit). It needs no Python and no admin rights.</li>
+  <li>It is new and not code-signed yet, so you will see two warnings, which mean "Microsoft has not seen this file much", not "this file is harmful". In the browser, choose <b>Keep</b>. In "Windows protected your PC", choose <b>More info</b>, then <b>Run anyway</b>. The installer is built from the public source by <a href="https://github.com/kvothesson/chasqui/actions/workflows/windows.yml">GitHub Actions</a>.</li>
+  <li>Install <a href="https://vb-audio.com/Cable/">VB-Audio Cable</a> if your mode needs it.</li>
+</ol>
+<p>With Python 3.11 or newer, you can use <code>pip install chasqui-translate</code> and then <code>chasqui ui</code> instead.</p>
+
+<h2>The first run</h2>
+<p>A setup window checks three things and tells you whether each is ready:</p>
+<ol>
+  <li><b>Your OpenAI key.</b> Paste it and press <b>VERIFY</b>. chasqui asks OpenAI whether the key can use the model.</li>
+  <li><b>VB-Audio Cable.</b> You get a link if it is missing.</li>
+  <li><b>The device switcher,</b> which moves your Windows audio devices in Headset and Media modes. The installer brings it along.</li>
+</ol>
+<p><b>DONE · PING</b> closes the window and runs a test translation. <b>SETUP</b>, under START, opens it again.</p>
+
+<h2>Turn on Stereo Mix for calls</h2>
+<p>Headset mode needs a way to capture the other person's voice. If your sound card has Stereo Mix: open the Windows sound settings, go to the <b>Recording</b> tab, right-click and choose <b>Show Disabled Devices</b>, then enable <b>Stereo Mix</b>. Many PCs do not have it, and then the alternative is <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>.</p>
+
+<h2>When something does not work</h2>
+<ul>
+  <li><b>The light says GLITCH:</b> open <b>BUFFER</b>. The reason is in the log.</li>
+  <li><b>It picked the wrong device:</b> open <b>BUFFER</b>, then <b>AUDIO DEVICES</b>, and pick by name. Press <b>RESCAN</b> after plugging something in.</li>
+  <li><b>The other person hears nothing:</b> <a href="{calls}">lower the noise suppression</a> in the call app.</li>
+  <li><b>Windows sound seems stuck on the cable:</b> always stop with <b>STOP</b> or by closing the window, which hands your devices back. If the process was killed, set them back in the Windows sound settings.</li>
+  <li><b>Still stuck:</b> <a href="https://github.com/kvothesson/chasqui/issues/new?template=bug.yml">open an issue</a> with what the log says.</li>
+</ul>
+
+<h2>Mac and Linux</h2>
+<p>Not for audio yet: calls and video translation need Windows, because chasqui switches Windows audio devices for you. The text mode works on both with <code>pip install chasqui-translate</code>.</p>

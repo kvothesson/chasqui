@@ -27,7 +27,7 @@ Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 Sin Python y sin pedir permisos de administrador. Se instala para tu usuario,
 agrega una entrada en el menú Inicio y abre chasqui, que en el primer arranque
 te guía para cargar la API key (ver
-[Primer arranque](#primer-arranque-la-ventana-de-configuración)). Para las
+[Primer arranque](#primer-arranque-la-ventana-de-configuración)). Para videos y
 llamadas también necesitás [VB-Audio Cable](https://vb-audio.com/Cable/); la
 ventana de configuración te avisa si falta.
 
@@ -138,7 +138,8 @@ configuración que revisa tres cosas y dice si cada una está lista:
    OpenAI si esa key puede usar el modelo que va a correr, y la guarda en
    `~/.chasqui/config.yaml`. Una key en `OPENAI_API_KEY` o en un
    `chasqui.yaml` sigue ganándole a la guardada.
-2. **VB-Audio Cable**, que necesitan los modos de llamada. Con un link si falta.
+2. **VB-Audio Cable**, que necesitan los modos de llamada y media. Con un link si falta.
+   Headset también necesita Stereo Mix o Hi-Fi Cable para escuchar al otro lado.
 3. **El cambiador de dispositivos** (el módulo de PowerShell AudioDeviceCmdlets),
    con el que los modos headset y media mueven tus dispositivos de Windows.
 
