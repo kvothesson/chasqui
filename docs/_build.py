@@ -336,7 +336,7 @@ def guide_page(source: str, key: str, lang: str) -> str:
 </main>
 
 <footer>
-  <p>{t["license"]} · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a></p>
+  <p>{t["license"]} · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a> · <a href="https://kvothesson.com/">kvothesson.com</a></p>
   <p>{t["disclaimer"]}</p>
 </footer>
 

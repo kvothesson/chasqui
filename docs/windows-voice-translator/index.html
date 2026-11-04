@@ -285,8 +285,8 @@
 <table>
   <thead><tr><th>Mode</th><th>For</th><th>Besides the OpenAI key</th><th class="n">Per min</th></tr></thead>
   <tbody>
-    <tr><td><a href="../translate-youtube/">Media</a></td><td>YouTube, streams, anything playing</td><td>VB-Audio Cable</td><td class="n">$0.051</td></tr>
-    <tr><td><a href="../translate-calls/">Headset</a></td><td>Two-way calls, any app</td><td>VB-Audio Cable, plus Stereo Mix or Hi-Fi Cable, plus headphones</td><td class="n">$0.102</td></tr>
+    <tr><td><a href="../translate-youtube/">Video or stream</a></td><td>YouTube, streams, anything playing</td><td>VB-Audio Cable</td><td class="n">$0.051</td></tr>
+    <tr><td><a href="../translate-calls/">Call, any app</a></td><td>Two-way calls, any app</td><td>VB-Audio Cable, plus Stereo Mix or Hi-Fi Cable, plus headphones</td><td class="n">$0.102</td></tr>
     <tr><td><a href="../translate-calls/">Meet</a></td><td>Two-way calls, wired by hand</td><td>VB-Audio Cable, plus a second cable, plus headphones</td><td class="n">$0.102</td></tr>
   </tbody>
 </table>
@@ -304,17 +304,17 @@
 <ol>
   <li><b>Your OpenAI key.</b> Paste it and press <b>VERIFY</b>. chasqui asks OpenAI whether the key can use the model.</li>
   <li><b>VB-Audio Cable.</b> You get a link if it is missing.</li>
-  <li><b>The device switcher,</b> which moves your Windows audio devices in Headset and Media modes. The installer brings it along.</li>
+  <li><b>The device switcher,</b> which moves your Windows audio devices for calls and videos. The installer brings it along.</li>
 </ol>
-<p><b>DONE · PING</b> closes the window and runs a test translation. <b>SETUP</b>, under START, opens it again.</p>
+<p><b>DONE · TEST</b> closes the window and runs a test translation. <b>SETUP</b>, under START, opens it again.</p>
 
 <h2>Turn on Stereo Mix for calls</h2>
-<p>Headset mode needs a way to capture the other person's voice. If your sound card has Stereo Mix: open the Windows sound settings, go to the <b>Recording</b> tab, right-click and choose <b>Show Disabled Devices</b>, then enable <b>Stereo Mix</b>. Many PCs do not have it, and then the alternative is <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>.</p>
+<p>A call needs a way to capture the other person's voice. If your sound card has Stereo Mix: open the Windows sound settings, go to the <b>Recording</b> tab, right-click and choose <b>Show Disabled Devices</b>, then enable <b>Stereo Mix</b>. Many PCs do not have it, and then the alternative is <a href="https://vb-audio.com/Cable/">Hi-Fi Cable</a>.</p>
 
 <h2>When something does not work</h2>
 <ul>
   <li><b>The light says GLITCH:</b> open <b>BUFFER</b>. The reason is in the log.</li>
-  <li><b>It picked the wrong device:</b> open <b>BUFFER</b>, then <b>AUDIO DEVICES</b>, and pick by name. Press <b>RESCAN</b> after plugging something in.</li>
+  <li><b>It picked the wrong device:</b> open <b>DETAILS</b>, then <b>AUDIO DEVICES</b>, and pick by name. Press <b>SEARCH AGAIN</b> after plugging something in.</li>
   <li><b>The other person hears nothing:</b> <a href="../translate-calls/">lower the noise suppression</a> in the call app.</li>
   <li><b>Windows sound seems stuck on the cable:</b> always stop with <b>STOP</b> or by closing the window, which hands your devices back. If the process was killed, set them back in the Windows sound settings.</li>
   <li><b>Still stuck:</b> <a href="https://github.com/kvothesson/chasqui/issues/new?template=bug.yml">open an issue</a> with what the log says.</li>
@@ -335,7 +335,7 @@
 </main>
 
 <footer>
-  <p>MIT licensed · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a></p>
+  <p>MIT licensed · <a href="https://github.com/kvothesson/chasqui">github.com/kvothesson/chasqui</a> · <a href="https://pypi.org/project/chasqui-translate/">PyPI</a> · <a href="https://kvothesson.com/">kvothesson.com</a></p>
   <p>Not affiliated with OpenAI.</p>
 </footer>
 
