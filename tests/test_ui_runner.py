@@ -250,16 +250,18 @@ def test_the_users_language_is_always_the_left_box():
     """
     from chasqui.adapters import UI_ADAPTER_NAMES
     from chasqui.ui.app import LANG_ROLES
+    from chasqui.ui.strings import t
 
+    mine = {t("role.i_speak"), t("role.i_hear")}
     for mode in UI_ADAPTER_NAMES:
         left, right = LANG_ROLES[mode]
-        assert left.lower().startswith("i "), (
+        assert left in mine, (
             f"Mode {mode!r} captions its LEFT box {left!r}. That box is the "
             "user's language in every mode — if this one really is the other "
             "side's, add the mode to LEFT_IS_TARGET so the pair is reversed on "
             "the way to Config instead of on screen."
         )
-        assert not right.lower().startswith("i "), (
+        assert right not in mine, (
             f"Mode {mode!r} captions its RIGHT box {right!r}, claiming both "
             "boxes are the user's. One of them is the other side."
         )
@@ -322,3 +324,19 @@ def test_classify_levels():
     assert R.classify("  [OUT error] connection refused") == R.ERROR
     assert R.classify("  [auto] Windows default mic → CABLE Output") == R.ACCENT
     assert R.classify("  Ready. Speak in ES.") == R.INFO
+
+
+def test_every_window_text_says_the_same_thing_in_both_languages():
+    """A placeholder missing from one language crashes the window only for the
+    users of that language, the ones least likely to report it in English."""
+    import string
+
+    from chasqui.ui.strings import _T
+
+    def fields(text):
+        return {name for _, name, _, _ in string.Formatter().parse(text) if name}
+
+    for key, (en, es) in _T.items():
+        assert en and es, f"{key!r} is empty in one language"
+        assert fields(en) == fields(es), (
+            f"{key!r} fills {sorted(fields(en))} in English but {sorted(fields(es))} in Spanish")

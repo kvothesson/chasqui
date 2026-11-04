@@ -9,15 +9,17 @@ import json
 import math
 import sys
 import time
+import unicodedata
 from pathlib import Path
 from typing import Optional
 
-from ..adapters import ADAPTER_LABELS, UI_ADAPTER_NAMES
+from ..adapters import UI_ADAPTER_NAMES
 from ..core.config import Config, find_config, load_config
 from ..core.constants import LANG_NAMES
 from ..core.pricing import format_usd, rates_for
 from .icon import ensure_ico, tk_photo_image
 from .runner import ACCENT, CheckDone, ERROR, INFO, LogLine, SessionRunner, StateChange, TurnLine, WARN
+from .strings import lang_name, t
 
 VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
 
@@ -46,14 +48,15 @@ ADAPTER_DEVICES: dict[str, set[str]] = {
 # silently reverse what the boxes mean and the user would have to swap their
 # two languages by hand to get the same result.
 LANG_ROLES: dict[str, tuple[str, str]] = {
-    "headset":     ("I speak", "They speak"),
-    "meet":        ("I speak", "They speak"),
-    "bridge":      ("I speak", "They speak"),
-    "virtual-mic": ("I speak", "They hear"),
-    "device":      ("I speak", "They hear"),
-    "media":       ("I hear", "They speak"),
+    "headset":     (t("role.i_speak"), t("role.they_speak")),
+    "meet":        (t("role.i_speak"), t("role.they_speak")),
+    "media":       (t("role.i_hear"), t("role.they_speak")),
 }
-DEFAULT_ROLES = ("I speak", "They hear")
+DEFAULT_ROLES = (t("role.i_speak"), t("role.they_hear"))
+
+# The mode picker's words. Three modes, the three the landing promises; bridge,
+# virtual-mic and device are still there from the CLI (`chasqui listen -a`).
+MODE_LABELS: dict[str, str] = {name: t(f"mode.{name}") for name in UI_ADAPTER_NAMES}
 
 # Modes where the left picker holds target_lang instead of source_lang. In
 # media the audio being translated is the source, so pinning the user to the
@@ -64,23 +67,23 @@ LEFT_IS_TARGET = {"media"}
 # ⇄ when both directions are live, otherwise it points the way the translation
 # actually travels — the only visual difference between "we can talk" and
 # "you are being broadcast".
-BIDIRECTIONAL = {"headset", "meet", "bridge"}
+BIDIRECTIONAL = {"headset", "meet"}
 
 # Labels have to stand on their own: the compact window has no room for the
 # explanatory column that used to sit beside them, and "App input" / "App
 # output" mean nothing without it. Each one now names both ends of the wire.
 DEVICE_FIELDS = [
-    ("mic",      "Your mic",     "Your voice goes in here",           "input"),
-    ("speaker",  "To the app",   "Virtual cable the app listens to",  "output"),
-    ("earphone", "You hear",     "Where the translation reaches you", "output"),
-    ("loopback", "From the app", "Capture of what the app is saying", "input"),
+    ("mic",      t("dev.mic"),      "Your voice goes in here",           "input"),
+    ("speaker",  t("dev.speaker"),  "Virtual cable the app listens to",  "output"),
+    ("earphone", t("dev.earphone"), "Where the translation reaches you", "output"),
+    ("loopback", t("dev.loopback"), "Capture of what the app is saying", "input"),
 ]
 
-AUTO = "Auto"
+AUTO = t("auto")
 
 # One wording for the missing key, used at startup and again if Start is
 # pressed anyway. Two phrasings of the same problem read as two problems.
-NO_API_KEY = "No API key yet. Press SETUP to add one."
+NO_API_KEY = t("no_key")
 
 # Palette. Dark on purpose: the log is the centre of the window and reads like
 # a console, and the app is meant to sit next to a call, not compete with it.
@@ -118,17 +121,17 @@ C_IN      = "#a98bf5"
 
 LEVEL_COLORS = {INFO: C_TEXT, ACCENT: C_ACCENT, WARN: C_WARN, ERROR: C_ERROR}
 
-# The state names are the system's own vocabulary, not the user's task: they say
-# what the node is doing, in one word, at a glance. "Running" and "Stopping..."
-# were the same shape and length and blurred into each other out of the corner
-# of an eye — these differ in silhouette as well as colour.
+# One plain word per state, what the user would say it is doing. They used to be
+# the lore's words (LATENT, ON ROUTE, GLITCH), which nobody about to translate a
+# call could read. Running and stopping still differ in length as well as
+# colour, so they do not blur into each other out of the corner of an eye.
 STATE_COLORS = {
-    "idle":     (C_MUTED,  "LATENT"),
-    "starting": (C_WARN,   "COMPILING"),
-    "running":  (C_OK,     "ON ROUTE"),
-    "stopping": (C_WARN,   "UNWINDING"),
-    "checking": (C_WARN,   "PING"),
-    "error":    (C_ERROR,  "GLITCH"),
+    "idle":     (C_MUTED,  t("state.idle")),
+    "starting": (C_WARN,   t("state.starting")),
+    "running":  (C_OK,     t("state.running")),
+    "stopping": (C_WARN,   t("state.stopping")),
+    "checking": (C_WARN,   t("state.checking")),
+    "error":    (C_ERROR,  t("state.error")),
 }
 
 
@@ -150,11 +153,14 @@ def hex_points(cx: float, cy: float, radius: float) -> list[float]:
 
 
 def _lang_choices() -> list[str]:
-    return [f"{name} ({code})" for code, name in sorted(LANG_NAMES.items(), key=lambda kv: kv[1])]
+    # Sorted without accents, or "Árabe" lands after "Ruso".
+    def plain(label: str) -> str:
+        return unicodedata.normalize("NFKD", label).encode("ascii", "ignore").decode().lower()
+    return sorted((_lang_label(code) for code in LANG_NAMES), key=plain)
 
 
 def _lang_label(code: str) -> str:
-    return f"{LANG_NAMES.get(code, code)} ({code})"
+    return f"{lang_name(code, LANG_NAMES.get(code, code))} ({code})"
 
 
 def _lang_code(label: str) -> str:
@@ -415,7 +421,7 @@ class ChasquiApp:
         )
         style.map("TScrollbar", background=[("active", C_BORDER)])
 
-        # The devices toggle, on a panel. Same shape as the BUFFER link below
+        # The devices toggle, on a panel. Same shape as the DETAILS link below
         # it because it does the same thing — clam's checkbutton draws a white
         # indicator box that no amount of indicatorbackground would darken, and
         # it was the one bright object in a black window.
@@ -443,7 +449,7 @@ class ChasquiApp:
         brand.grid(row=0, column=0, sticky="w")
         ttk.Label(brand, text="C H A S Q U I", style="Title.TLabel").grid(
             row=0, column=0, sticky="w")
-        ttk.Label(brand, text="mensajero entre nodos", style="Tag.TLabel").grid(
+        ttk.Label(brand, text=t("tagline"), style="Tag.TLabel").grid(
             row=1, column=0, sticky="w", pady=(1, 0))
 
         status = ttk.Frame(header)
@@ -466,7 +472,7 @@ class ChasquiApp:
             hex_points(9.5, 9.5, 8.6), fill="", outline=C_SOCKET)
         self._dot = self.status_dot.create_polygon(
             hex_points(9.5, 9.5, 5.4), fill=C_MUTED, outline="")
-        self.status_label = ttk.Label(status, text="LATENT", style="Status.TLabel")
+        self.status_label = ttk.Label(status, text=t("state.idle"), style="Status.TLabel")
         self.status_label.grid(row=0, column=1)
 
         # Floating over a call is the point of a gadget this size — without
@@ -520,16 +526,16 @@ class ChasquiApp:
         self.var_adapter = self.tk.StringVar()
         self.cmb_adapter = ttk.Combobox(
             settings, textvariable=self.var_adapter, state="readonly",
-            values=[ADAPTER_LABELS[name] for name in UI_ADAPTER_NAMES])
+            values=list(MODE_LABELS.values()))
         self.cmb_adapter.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
         self.cmb_adapter.bind("<<ComboboxSelected>>", lambda _e: self._on_adapter_change())
-        self.var_adapter.set(ADAPTER_LABELS[initial_adapter])
+        self.var_adapter.set(MODE_LABELS[initial_adapter])
 
         # --- secondary settings (hidden until Details) -----------------
         self.extras_wrap, self.extras = self._panel()
         self.extras.columnconfigure(1, weight=1)
 
-        ttk.Label(self.extras, text="Voice", style="PanelMuted.TLabel").grid(
+        ttk.Label(self.extras, text=t("voice"), style="PanelMuted.TLabel").grid(
             row=0, column=0, sticky="w", padx=(0, 8))
         self.var_voice = self.tk.StringVar(value=self.base_config.voice)
         self.cmb_voice = ttk.Combobox(
@@ -539,7 +545,7 @@ class ChasquiApp:
 
         self.var_show_devices = self.tk.BooleanVar(value=False)
         self.btn_devices = ttk.Button(
-            self.extras, text="▸ AUDIO DEVICES", style="PanelLink.TButton",
+            self.extras, text="▸ " + t("devices"), style="PanelLink.TButton",
             command=self._toggle_devices)
         self.btn_devices.grid(row=0, column=2, sticky="e", padx=(8, 0))
 
@@ -562,7 +568,7 @@ class ChasquiApp:
             # says what it is, the mode already greys out what it isn't.
 
         ttk.Button(
-            self.devices_frame, text="RESCAN", style="Inset.TButton",
+            self.devices_frame, text=t("rescan"), style="Inset.TButton",
             command=lambda: self._load_device_lists(force=True),
         ).grid(row=len(DEVICE_FIELDS), column=1, sticky="w", pady=(8, 0))
 
@@ -572,11 +578,11 @@ class ChasquiApp:
         actions.columnconfigure(0, weight=1)
 
         self.btn_start = ttk.Button(
-            actions, text="START", style="Accent.TButton", command=self._on_start_stop)
+            actions, text=t("start"), style="Accent.TButton", command=self._on_start_stop)
         self.btn_start.grid(row=0, column=0, sticky="ew")
 
         self.btn_check = ttk.Button(
-            actions, text="PING", style="Ghost.TButton", command=self._on_check)
+            actions, text=t("test"), style="Ghost.TButton", command=self._on_check)
         self.btn_check.grid(row=0, column=1, padx=(6, 0))
 
         # --- cost line (always visible — the reason to keep it in sight)
@@ -585,11 +591,11 @@ class ChasquiApp:
 
         self.var_details = self.tk.BooleanVar(value=False)
         self.btn_details = ttk.Button(
-            outer, text="▸ BUFFER", style="Link.TButton", command=self._toggle_details)
+            outer, text="▸ " + t("details"), style="Link.TButton", command=self._toggle_details)
         self.btn_details.grid(row=5, column=0, sticky="w", pady=(2, 0))
         # Same row, other end: the way back into the setup window, for a new
         # key or after installing the cable.
-        ttk.Button(outer, text="SETUP", style="Link.TButton", command=self._open_setup).grid(
+        ttk.Button(outer, text=t("setup"), style="Link.TButton", command=self._open_setup).grid(
             row=5, column=0, sticky="e", pady=(2, 0))
 
         # --- log (built always, shown only in Details) ------------------
@@ -618,14 +624,14 @@ class ChasquiApp:
         self.log.tag_configure("meta", foreground=C_MUTED, font=(mono_font, 7))
 
         self.btn_clear = ttk.Button(
-            outer, text="FLUSH", style="Ghost.TButton", command=self._clear_log)
+            outer, text=t("clear"), style="Ghost.TButton", command=self._clear_log)
 
         self.footer_meta = ttk.Label(outer, text="", style="Muted.TLabel")
         self._update_footer()
         self._apply_size()
 
         source = self.config_path or find_config()
-        self._log("chasqui · node online", ACCENT)
+        self._log("chasqui · ready", ACCENT)
         self._log(f"Config: {source or 'built-in defaults (no chasqui.yaml found)'}", INFO)
         self._log(self._rate_line(), INFO)
         if not self.base_config.api_key:
@@ -642,8 +648,10 @@ class ChasquiApp:
         except Exception:
             return
         # Mode first: it decides which box each saved language belongs in.
-        if (adapter := data.get("adapter")) in ADAPTER_LABELS:
-            self.var_adapter.set(ADAPTER_LABELS[adapter])
+        # A mode the window no longer offers (bridge, virtual-mic, device) falls
+        # back to the default rather than showing a label that is not in the list.
+        if (adapter := data.get("adapter")) in MODE_LABELS:
+            self.var_adapter.set(MODE_LABELS[adapter])
         source = data.get("source_lang")
         target = data.get("target_lang")
         if source and target:
@@ -696,7 +704,7 @@ class ChasquiApp:
 
     def _adapter_name(self) -> str:
         label = self.var_adapter.get()
-        for name, text in ADAPTER_LABELS.items():
+        for name, text in MODE_LABELS.items():
             if text == label:
                 return name
         return "headset"
@@ -739,7 +747,7 @@ class ChasquiApp:
             arrow = "⇄"
         else:
             # One way only, pointing where the translation actually travels:
-            # out of the user in virtual-mic/device, into them in media.
+            # into the user in media.
             arrow = "←" if adapter in LEFT_IS_TARGET else "→"
         self.btn_swap.configure(text=arrow)
 
@@ -781,20 +789,20 @@ class ChasquiApp:
             self.btn_clear.grid(row=9, column=0, sticky="w", pady=(6, 0))
             self.footer_meta.grid(row=10, column=0, sticky="w", pady=(6, 0))
             self.outer.rowconfigure(8, weight=1)
-            self.btn_details.configure(text="▾ BUFFER")
+            self.btn_details.configure(text="▾ " + t("details"))
         else:
             for widget in (self.extras_wrap, self.devices_wrap, self.log_wrap,
                            self.btn_clear, self.footer_meta):
                 widget.grid_remove()
             self.outer.rowconfigure(8, weight=0)
-            self.btn_details.configure(text="▸ BUFFER")
+            self.btn_details.configure(text="▸ " + t("details"))
 
         self._grid_devices()
         self._resize()
 
     def _grid_devices(self) -> None:
         self.btn_devices.configure(
-            text="▾ AUDIO DEVICES" if self.var_show_devices.get() else "▸ AUDIO DEVICES")
+            text=("▾ " if self.var_show_devices.get() else "▸ ") + t("devices"))
         if self.var_show_devices.get() and self.var_details.get():
             self.devices_wrap.grid(row=7, column=0, sticky="ew", pady=(8, 0))
             self._load_device_lists()
@@ -852,7 +860,7 @@ class ChasquiApp:
 
         source, target = self._lang_pair()
         if source == target:
-            self._log("Source and target language are the same — nothing to translate.", ERROR)
+            self._log(t("same_lang"), ERROR)
             return
 
         self._save_settings()
@@ -871,7 +879,7 @@ class ChasquiApp:
         self._save_settings()
         cfg = self._build_config()
         self._log("")
-        self._log(f"Ping — {cfg.source_lang} → {cfg.target_lang} via {cfg.model}", ACCENT)
+        self._log(f"Test · {cfg.source_lang} → {cfg.target_lang} via {cfg.model}", ACCENT)
         try:
             self.runner.start_check(cfg)
             self._set_state("checking")
@@ -895,9 +903,9 @@ class ChasquiApp:
         if not self.base_config.api_key:
             self._log(NO_API_KEY, WARN)
             return
-        self._log("Setup saved.", ACCENT)
+        self._log(t("setup_saved"), ACCENT)
         if ping:
-            # Open the buffer: the ping's PASS/FAIL is written there, and a
+            # Open the details: the test's result is written there, and a
             # first run that ends in silence looks like nothing happened.
             if not self.var_details.get():
                 self._toggle_details()
@@ -918,7 +926,7 @@ class ChasquiApp:
         # user's Windows default mic/output back on their way out, and skipping
         # that leaves the machine talking to a virtual cable after chasqui quits.
         self._set_state("stopping")
-        self._log("Stopping — restoring your Windows audio devices...", ACCENT)
+        self._log(t("closing"), ACCENT)
         self.runner.stop()
         self._close_deadline = time.time() + 15
         self._poll_close()
@@ -964,7 +972,7 @@ class ChasquiApp:
         elif event.state in ("stopped", "check_done"):
             self._set_state("idle")
             if event.state == "stopped":
-                self._log("Session ended.", ACCENT)
+                self._log(t("session_ended"), ACCENT)
         elif event.state == "error":
             self._set_state("error")
             self._log(f"Session error: {event.detail}", ERROR)
@@ -979,7 +987,7 @@ class ChasquiApp:
 
         running = state in ("running", "starting", "stopping")
         self.btn_start.configure(
-            text="STOP" if running else "START",
+            text=t("stop") if running else t("start"),
             style="Stop.TButton" if running else "Accent.TButton",
             state="disabled" if state in ("stopping", "checking") else "normal",
         )
@@ -1032,9 +1040,9 @@ class ChasquiApp:
         if result.ok:
             self._log(f"  {result.source_text}", INFO)
             self._log(f"  {result.target_text}", ACCENT)
-            self._log(f"  PASS — {result.latency_ms:.0f}ms round trip", ACCENT)
+            self._log(t("test_ok", ms=result.latency_ms), ACCENT)
         else:
-            self._log(f"  FAIL — {result.error}", ERROR)
+            self._log(t("test_fail", error=result.error), ERROR)
 
     def _rate_line(self) -> str:
         """State the rate the meter is using, so a wrong number is catchable.
@@ -1073,7 +1081,7 @@ class ChasquiApp:
         if not spent and not price.minutes:
             return ""
 
-        parts = [f"{price.minutes:.1f} min"] if price.minutes else []
+        parts = [t("minutes", n=price.minutes)] if price.minutes else []
         # A tilde, always: the rate is published, but whether the transcription
         # minute stacks on top of the translate minute is not (see
         # core/pricing.py). Do not drop it until that is measured.
@@ -1083,8 +1091,8 @@ class ChasquiApp:
         if budget:
             left = budget - spent
             parts.append(
-                f"{format_usd(left)} left of {format_usd(budget)}" if left > 0
-                else f"over budget by {format_usd(-left)}"
+                t("left_of", left=format_usd(left), budget=format_usd(budget)) if left > 0
+                else t("over_budget", over=format_usd(-left))
             )
         if not price.exact and price.note:
             parts.append(price.note)
@@ -1092,10 +1100,10 @@ class ChasquiApp:
 
     def _update_footer(self) -> None:
         # The cost line stays visible in gadget mode; the rest is detail.
-        self.footer.configure(text=self._cost_text() or "no traffic yet")
+        self.footer.configure(text=self._cost_text() or t("no_spend"))
         average = self.latency_total / self.turns if self.turns else 0.0
         self.footer_meta.configure(
-            text=f"{self.base_config.model}   ·   {self.turns} turns   ·   avg {average:.0f}ms")
+            text=t("meta", model=self.base_config.model, turns=self.turns, avg=average))
 
     # ------------------------------------------------------------------
 

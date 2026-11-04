@@ -6,6 +6,23 @@ What changed for people who use chasqui. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The window speaks Spanish** when Windows does, English otherwise
+  (`CHASQUI_UI_LANG=es|en` picks one). Window, setup and language names; the
+  session log stays English so bug reports read the same.
+- **Plain names** for the states and buttons: READY, CONNECTING, TRANSLATING,
+  STOPPING, TESTING, ERROR instead of LATENT, COMPILING, ON ROUTE, UNWINDING,
+  PING, GLITCH; TEST, DETAILS, CLEAR and SEARCH AGAIN instead of PING, BUFFER,
+  FLUSH and RESCAN.
+- **Three modes in the window**: Call, any app (`headset`); Video or stream
+  (`media`); Call, cables picked by hand (`meet`). `bridge`, `virtual-mic` and
+  `device` stay in the CLI.
+
+### Fixed
+
+- The setup window said translation costs about USD 2 an hour; it is about 3.
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

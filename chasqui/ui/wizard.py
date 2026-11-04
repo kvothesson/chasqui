@@ -1,7 +1,7 @@
-"""The first-run window: key, cable, switcher, then a ping.
+"""The first-run window: key, cable, switcher, then a test.
 
 Opens over the main window whenever there is no API key, and from the SETUP
-link at any time after. Three rows, each answering "is this ready?" with a
+(CONFIGURAR) link at any time after. Three rows, each answering "is this ready?" with a
 light and one line of words; only the key blocks, because without it nothing
 works, while the cable and the switcher only matter for some modes.
 
@@ -16,15 +16,16 @@ from typing import Callable
 
 from ..core import firstrun
 from . import app as skin
+from .strings import core, t
 
 # Same wording as the button that opens it, so the link and the window read
 # as one thing.
-TITLE = "chasqui · setup"
+TITLE = t("w.title")
 
 
 class SetupWizard:
     def __init__(self, owner, model: str, on_done: Callable[[bool], None]):
-        """`on_done(ping)` runs once, when the window closes; ping is True on DONE."""
+        """`on_done(ping)` runs once, when the window closes; ping is True on DONE · TEST."""
         self.owner = owner
         self.tk = owner.tk
         self.model = model
@@ -90,16 +91,14 @@ class SetupWizard:
         outer.pack(fill="both", expand=True)
         outer.columnconfigure(0, weight=1)
 
-        ttk.Label(outer, text="F I R S T   R U N", style="Title.TLabel").grid(
+        ttk.Label(outer, text=t("w.heading"), style="Title.TLabel").grid(
             row=0, column=0, sticky="w")
-        ttk.Label(outer, text="three things, once", style="Tag.TLabel").grid(
+        ttk.Label(outer, text=t("w.tagline"), style="Tag.TLabel").grid(
             row=1, column=0, sticky="w")
 
         # 1 · the key ----------------------------------------------------
-        key_box, self.key_light, self.key_note = self._row(outer, 2, "1 · OPENAI KEY")
-        self.key_note.configure(text=(
-            "chasqui uses your own OpenAI key; OpenAI bills you directly, "
-            "about USD 2 an hour of translation. The key stays on this computer."))
+        key_box, self.key_light, self.key_note = self._row(outer, 2, t("w.key"))
+        self.key_note.configure(text=t("w.key_note"))
         self.var_key = self.tk.StringVar()
         self.entry = ttk.Entry(key_box, textvariable=self.var_key, show="•", style="Key.TEntry")
         self.entry.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
@@ -108,40 +107,40 @@ class SetupWizard:
         keys = ttk.Frame(key_box, style="Panel.TFrame")
         keys.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(6, 0))
         keys.columnconfigure(0, weight=1)
-        ttk.Button(keys, text="GET A KEY ↗", style="PanelLink.TButton",
+        ttk.Button(keys, text=t("w.get_key"), style="PanelLink.TButton",
                    command=lambda: webbrowser.open(firstrun.KEYS_URL)).grid(
             row=0, column=0, sticky="w")
-        self.btn_verify = ttk.Button(keys, text="VERIFY", style="Accent.TButton",
+        self.btn_verify = ttk.Button(keys, text=t("w.verify"), style="Accent.TButton",
                                      command=self._verify)
         self.btn_verify.grid(row=0, column=1, sticky="e")
 
         # 2 · the cable --------------------------------------------------
-        cable_box, self.cable_light, self.cable_note = self._row(outer, 3, "2 · VIRTUAL CABLE")
-        self.cable_note.configure(text="Looking...")
+        cable_box, self.cable_light, self.cable_note = self._row(outer, 3, t("w.cable"))
+        self.cable_note.configure(text=t("w.looking"))
         self.btn_cable = ttk.Button(
-            cable_box, text="GET VB-CABLE ↗", style="PanelLink.TButton",
+            cable_box, text=t("w.get_cable"), style="PanelLink.TButton",
             command=lambda: webbrowser.open(firstrun.CABLE_URL))
         self.btn_cable.grid(row=2, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
         # 3 · the switcher -----------------------------------------------
-        sw_box, self.switch_light, self.switch_note = self._row(outer, 4, "3 · DEVICE SWITCHER")
-        self.switch_note.configure(text="Looking...")
-        self.btn_recheck = ttk.Button(sw_box, text="RECHECK", style="Inset.TButton",
+        sw_box, self.switch_light, self.switch_note = self._row(outer, 4, t("w.switcher"))
+        self.switch_note.configure(text=t("w.looking"))
+        self.btn_recheck = ttk.Button(sw_box, text=t("rescan"), style="Inset.TButton",
                                       command=self._recheck_machine)
         self.btn_recheck.grid(row=2, column=2, sticky="e", pady=(6, 0))
 
         # done -------------------------------------------------------------
-        self.btn_done = ttk.Button(outer, text="DONE · PING", style="Accent.TButton",
+        self.btn_done = ttk.Button(outer, text=t("w.done"), style="Accent.TButton",
                                    command=self._finish, state="disabled")
         self.btn_done.grid(row=5, column=0, sticky="ew", pady=(12, 0))
-        ttk.Button(outer, text="LATER", style="Link.TButton", command=self._close).grid(
+        ttk.Button(outer, text=t("w.later"), style="Link.TButton", command=self._close).grid(
             row=6, column=0, sticky="w", pady=(4, 0))
 
         # Someone reopening setup with a key already in place can finish
         # straight away; replacing it is optional.
         if self.owner.base_config.api_key:
             self._paint(self.key_light, skin.C_OK)
-            self.key_note.configure(text="A key is already set. Paste another to replace it.")
+            self.key_note.configure(text=t("w.key_set"))
             self.btn_done.configure(state="normal")
 
     # ------------------------------------------------------------------
@@ -158,7 +157,7 @@ class SetupWizard:
         key = self.var_key.get()
         self.btn_verify.configure(state="disabled", text="...")
         self._paint(self.key_light, skin.C_WARN)
-        self.key_note.configure(text="Asking OpenAI...")
+        self.key_note.configure(text=t("w.asking"))
 
         def work():
             self._later(self._verified, key, firstrun.check_api_key(key, self.model))
@@ -166,22 +165,22 @@ class SetupWizard:
         threading.Thread(target=work, daemon=True).start()
 
     def _verified(self, key: str, result: firstrun.KeyCheck) -> None:
-        self.btn_verify.configure(state="normal", text="VERIFY")
+        self.btn_verify.configure(state="normal", text=t("w.verify"))
         if not result.usable:
             self._paint(self.key_light, skin.C_ERROR)
-            self.key_note.configure(text=result.message)
+            self.key_note.configure(text=core(result.message))
             return
         try:
             path = firstrun.save_api_key(key)
         except Exception as e:
             self._paint(self.key_light, skin.C_ERROR)
-            self.key_note.configure(text=f"Could not save the key: {e}")
+            self.key_note.configure(text=t("w.save_failed", error=e))
             return
         self.key_saved = True
         self.var_key.set("")
         ok = result.status == "ok"
         self._paint(self.key_light, skin.C_OK if ok else skin.C_WARN)
-        self.key_note.configure(text=f"{result.message} Saved to {path}.")
+        self.key_note.configure(text=t("w.saved_to", message=core(result.message), path=path))
         self.btn_done.configure(state="normal")
 
     def _recheck_machine(self) -> None:
@@ -189,7 +188,7 @@ class SetupWizard:
         for light, note in ((self.cable_light, self.cable_note),
                             (self.switch_light, self.switch_note)):
             self._paint(light, skin.C_WARN)
-            note.configure(text="Looking...")
+            note.configure(text=t("w.looking"))
 
         def work():
             cable = firstrun.has_virtual_cable()
@@ -202,10 +201,7 @@ class SetupWizard:
         self.btn_recheck.configure(state="normal")
         # Amber, not red, when missing: neither blocks the app, only some modes.
         self._paint(self.cable_light, skin.C_OK if cable else skin.C_WARN)
-        self.cable_note.configure(text=(
-            "Found. Calls can hear your translated voice." if cable else
-            "Not found. Calls (Headset) need it to carry your translated voice "
-            "into Meet, Zoom or Discord. Install it, restart Windows, then RECHECK."))
+        self.cable_note.configure(text=t("w.cable_ok") if cable else t("w.cable_missing"))
         # The download link is only an answer while the cable is missing.
         if cable:
             self.btn_cable.grid_remove()
@@ -213,10 +209,8 @@ class SetupWizard:
             self.btn_cable.grid()
         self._paint(self.switch_light, skin.C_OK if switcher else skin.C_WARN)
         self.switch_note.configure(text=(
-            "Found. chasqui can switch your Windows mic and speakers, and put them back."
-            if switcher else
-            "Not found. Headset and media modes switch your Windows devices with it. "
-            f"In PowerShell run: {firstrun.SWITCHER_INSTALL}"))
+            t("w.switcher_ok") if switcher else
+            t("w.switcher_missing", command=firstrun.SWITCHER_INSTALL)))
 
     def _finish(self) -> None:
         self._close(ping=True)

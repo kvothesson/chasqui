@@ -106,7 +106,9 @@ anywhere.
 ## Using the interface
 
 The window has two shapes. The one above is the default: small enough to park
-beside a call, and it shows only what you need mid-conversation.
+beside a call, and it shows only what you need mid-conversation. It speaks
+Spanish when Windows does and English otherwise; `CHASQUI_UI_LANG=es` or `en`
+picks one.
 
 ### The two language pickers
 
@@ -116,16 +118,17 @@ out:
 
 | Mode | Left box | Right box |
 |---|---|---|
-| `headset`, `meet`, `bridge` | I SPEAK | THEY SPEAK |
-| `virtual-mic`, `device` | I SPEAK | THEY HEAR |
-| `media` | I HEAR | THEY SPEAK |
+| Call (`headset`, `meet`) | I SPEAK | THEY SPEAK |
+| Video or stream (`media`) | I HEAR | THEY SPEAK |
 
 The arrow between them tells you which way the translation travels: **⇄** in the
-bidirectional modes, **→** when you are being broadcast one way, **←** in media
-mode when audio is coming at you. Click it to swap the two languages.
+two call modes and **←** for a video, where the audio is coming at you. Click it to swap the two languages.
 
-Below them sits the mode picker. `Headset — bidirectional, any app` is the one
-to start with.
+Below them sits the mode picker, with the three ways of using chasqui: **Call,
+any app** (`headset`, the one to start with), **Video or stream** (`media`) and
+**Call, cables picked by hand** (`meet`). The other adapters, `bridge`,
+`virtual-mic` and `device`, are for people who already know their audio routing
+and run from the CLI with `chasqui listen -a <name>`.
 
 ### First run: the setup window
 
@@ -141,23 +144,23 @@ itself. It checks three things and says, for each, whether it is ready:
 3. **The device switcher** (the AudioDeviceCmdlets PowerShell module), which
    the headset and media modes use to move your Windows devices.
 
-**DONE · PING** closes it and runs a ping, so the first thing you see is a
+**DONE · TEST** closes it and runs a test, so the first thing you see is a
 translation. **SETUP**, under START, opens it again later.
 
-### Start, Ping, and the state light
+### Start, Test, and the state light
 
-**START** opens the session. **PING** runs the same round-trip smoke test as
+**START** opens the session. **TEST** runs the same round-trip smoke test as
 `chasqui check`: no mic, no speakers, just "is the pipeline alive". The hexagon
-in the header is the node's state:
+in the header says what chasqui is doing:
 
 | Light | What is happening |
 |---|---|
-| `LATENT` | Idle. Nothing is running. |
-| `COMPILING` | Starting up: opening the socket, taking over your default devices. |
-| `ON ROUTE` | Live. Audio is being translated in both directions if the mode is bidirectional. |
-| `UNWINDING` | Stopping, and handing your Windows devices back. |
-| `PING` | Running the round-trip check. |
-| `GLITCH` | Something failed. Open BUFFER — the reason is in there. |
+| `READY` | Idle. Nothing is running. |
+| `CONNECTING` | Starting up: opening the socket, taking over your default devices. |
+| `TRANSLATING` | Live. Audio is being translated, both ways in a call. |
+| `STOPPING` | Stopping, and handing your Windows devices back. |
+| `TESTING` | Running the round-trip check. |
+| `ERROR` | Something failed. Open DETAILS: the reason is in there. |
 
 **Stopping matters more than it looks.** The `headset` and `media` modes take
 over your Windows default mic and output while they run and hand them back on
@@ -180,9 +183,9 @@ two directions at once, which is worth seeing before a long call. Set
 > in front of the figure is deliberate: see `core/pricing.py` for what is
 > measured and what is assumed.
 
-### BUFFER — the full panel
+### DETAILS: the full panel
 
-Click **▸ BUFFER** and the window grows into the second shape: the voice picker,
+Click **▸ DETAILS** and the window grows into the second shape: the voice picker,
 the audio devices, and the log.
 
 <p align="center">
@@ -196,7 +199,7 @@ call you can see at a glance which way a line travelled. It also holds the
 startup lines, the rate chasqui is pricing you at, and anything that went wrong.
 
 Lines accumulate whether the panel is open or not, so opening it after a failure
-shows you everything from the beginning. **FLUSH** clears it. The footer keeps
+shows you everything from the beginning. **CLEAR** clears it. The footer keeps
 the model, the turn count and the average latency.
 
 ### Audio devices
@@ -218,7 +221,7 @@ current mode are greyed out:
 | **You hear** | Where the translation reaches you |
 | **From the app** | Capture of what the app is saying |
 
-**RESCAN** re-reads the device list — press it after plugging something in.
+**SEARCH AGAIN** re-reads the device list — press it after plugging something in.
 Pick devices by name, never by index: Windows renumbers indices whenever a
 default changes, and chasqui's own adapters change defaults at startup.
 

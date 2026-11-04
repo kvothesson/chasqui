@@ -34,14 +34,14 @@ body:
     id: what
     attributes:
       label: What happened, and what you expected
-      placeholder: "I pressed START, the light went ON ROUTE, they spoke English and I heard nothing in my earphones."
+      placeholder: "I pressed START, the light went TRANSLATING, they spoke English and I heard nothing in my earphones."
     validations:
       required: true
   - type: textarea
     id: log
     attributes:
       label: The log
-      description: In the window, open ▸ BUFFER and copy everything. From the terminal, run again with `CHASQUI_DEBUG=1` for more detail.
+      description: In the window, open ▸ DETAILS (▸ DETALLES) and copy everything. From the terminal, run again with `CHASQUI_DEBUG=1` for more detail.
       render: text
   - type: textarea
     id: devices

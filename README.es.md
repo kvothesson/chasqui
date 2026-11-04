@@ -13,7 +13,7 @@ Traducción simultánea en tiempo real. Hablá tu idioma. Que te entiendan.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget.png" alt="La ventana de chasqui: dos idiomas, un modo, y Start" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-gadget-es.png" alt="La ventana de chasqui: dos idiomas, un modo, y Empezar" width="402">
 </p>
 
 ---
@@ -108,7 +108,8 @@ adaptador `text` corre en cualquier lado.
 
 La ventana tiene dos formas. La de arriba es la que viene por defecto: chica
 como para dejarla al lado de una llamada, y muestra solo lo que necesitás en el
-medio de una conversación.
+medio de una conversación. Habla en castellano si Windows está en castellano, y
+en inglés si no; `CHASQUI_UI_LANG=es` o `en` elige uno.
 
 ### Los dos selectores de idioma
 
@@ -117,24 +118,25 @@ según el modo y te dicen de quién es cada caja, así no tenés que deducirlo:
 
 | Modo | Caja izquierda | Caja derecha |
 |---|---|---|
-| `headset`, `meet`, `bridge` | I SPEAK (yo hablo) | THEY SPEAK (ellos hablan) |
-| `virtual-mic`, `device` | I SPEAK (yo hablo) | THEY HEAR (ellos escuchan) |
-| `media` | I HEAR (yo escucho) | THEY SPEAK (ellos hablan) |
+| Llamada (`headset`, `meet`) | YO HABLO | ELLOS HABLAN |
+| Video o stream (`media`) | YO ESCUCHO | ELLOS HABLAN |
 
-La flecha del medio te dice para dónde viaja la traducción: **⇄** en los modos
-bidireccionales, **→** cuando te están transmitiendo en un solo sentido, **←**
-en modo media cuando el audio viene hacia vos. Si la tocás, invierte los dos
+La flecha del medio te dice para dónde viaja la traducción: **⇄** en los dos modos
+de llamada y **←** en un video, donde el audio viene hacia vos. Si la tocás, invierte los dos
 idiomas.
 
-Abajo está el selector de modo. `Headset — bidirectional, any app` es el que
-conviene probar primero.
+Abajo está el selector de modo, con las tres formas de usar chasqui: **Llamada,
+cualquier app** (`headset`, la que conviene probar primero), **Video o stream**
+(`media`) y **Llamada, cables elegidos a mano** (`meet`). Los otros adaptadores,
+`bridge`, `virtual-mic` y `device`, son para quien ya conoce su ruteo de audio y
+se corren desde la CLI con `chasqui listen -a <nombre>`.
 
 ### Primer arranque: la ventana de configuración
 
 Si no hay API key en ningún lado, la ventana abre encima una ventanita de
 configuración que revisa tres cosas y dice si cada una está lista:
 
-1. **Tu key de OpenAI.** La pegás y apretás VERIFY: chasqui le pregunta a
+1. **Tu key de OpenAI.** La pegás y apretás VERIFICAR: chasqui le pregunta a
    OpenAI si esa key puede usar el modelo que va a correr, y la guarda en
    `~/.chasqui/config.yaml`. Una key en `OPENAI_API_KEY` o en un
    `chasqui.yaml` sigue ganándole a la guardada.
@@ -143,27 +145,27 @@ configuración que revisa tres cosas y dice si cada una está lista:
 3. **El cambiador de dispositivos** (el módulo de PowerShell AudioDeviceCmdlets),
    con el que los modos headset y media mueven tus dispositivos de Windows.
 
-**DONE · PING** la cierra y corre un ping, así lo primero que ves es una
-traducción. **SETUP**, debajo de START, la vuelve a abrir.
+**LISTO · PROBAR** la cierra y corre una prueba, así lo primero que ves es una
+traducción. **CONFIGURAR**, debajo de EMPEZAR, la vuelve a abrir.
 
-### Start, Ping y la luz de estado
+### Empezar, Probar y la luz de estado
 
-**START** abre la sesión. **PING** corre la misma prueba de ida y vuelta que
+**EMPEZAR** abre la sesión. **PROBAR** corre la misma prueba de ida y vuelta que
 `chasqui check`: sin micrófono ni parlantes, solo "el pipeline está vivo". El
-hexágono del encabezado es el estado del nodo:
+hexágono del encabezado dice qué está haciendo chasqui:
 
 | Luz | Qué está pasando |
 |---|---|
-| `LATENT` | En reposo. No hay nada corriendo. |
-| `COMPILING` | Arrancando: abriendo el socket, tomando tus dispositivos por defecto. |
-| `ON ROUTE` | En vivo. El audio se está traduciendo, en los dos sentidos si el modo es bidireccional. |
-| `UNWINDING` | Frenando, y devolviéndote los dispositivos de Windows. |
-| `PING` | Corriendo la prueba de ida y vuelta. |
-| `GLITCH` | Algo falló. Abrí BUFFER, el motivo está ahí adentro. |
+| `LISTO` | En reposo. No hay nada corriendo. |
+| `CONECTANDO` | Arrancando: abriendo el socket, tomando tus dispositivos por defecto. |
+| `TRADUCIENDO` | En vivo. El audio se está traduciendo, en los dos sentidos en una llamada. |
+| `FRENANDO` | Frenando, y devolviéndote los dispositivos de Windows. |
+| `PROBANDO` | Corriendo la prueba de ida y vuelta. |
+| `ERROR` | Algo falló. Abrí DETALLES, el motivo está ahí adentro. |
 
 **Frenar importa más de lo que parece.** Los modos `headset` y `media` te toman
 el micrófono y la salida por defecto de Windows mientras corren, y te los
-devuelven al salir. Usá STOP, o cerrá la ventana directamente (espera hasta 15
+devuelven al salir. Usá PARAR, o cerrá la ventana directamente (espera hasta 15
 segundos a que termine la devolución), en vez de matar el proceso.
 
 El hexágono de arriba a la derecha (**⬢** / **⬡**) mantiene la ventana por
@@ -184,13 +186,13 @@ aparece cuánto te queda.
 > adelante de la cifra está puesto a propósito: en `core/pricing.py` está qué
 > se mide y qué se asume.
 
-### BUFFER, el panel completo
+### DETALLES, el panel completo
 
-Tocá **▸ BUFFER** y la ventana crece a la segunda forma: el selector de voz,
+Tocá **▸ DETALLES** y la ventana crece a la segunda forma: el selector de voz,
 los dispositivos de audio y el log.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript.png" alt="La ventana expandida con una transcripción en vivo" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-transcript-es.png" alt="La ventana expandida con una transcripción en vivo" width="402">
 </p>
 
 El log es donde va cayendo la conversación mientras pasa. Cada turno muestra la
@@ -201,17 +203,17 @@ las líneas de arranque, la tarifa con la que chasqui te está midiendo el gasto
 y cualquier cosa que haya fallado.
 
 Las líneas se acumulan tengas el panel abierto o cerrado, así que si lo abrís
-después de un error vas a ver todo desde el principio. **FLUSH** lo limpia. El
+después de un error vas a ver todo desde el principio. **LIMPIAR** lo limpia. El
 pie muestra el modelo, la cantidad de turnos y la latencia promedio.
 
 ### Dispositivos de audio
 
 Los dispositivos quedan en **Auto**, y Auto acierta casi siempre. Abrí
-**▸ AUDIO DEVICES** solo cuando la detección automática elige el cable
+**▸ DISPOSITIVOS** solo cuando la detección automática elige el cable
 equivocado.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-devices.png" alt="El panel de dispositivos, cuatro selectores en Auto" width="402">
+  <img src="https://raw.githubusercontent.com/kvothesson/chasqui/master/docs/img/ui-devices-es.png" alt="El panel de dispositivos, cuatro selectores en Auto" width="402">
 </p>
 
 Cada campo nombra las dos puntas del cable, y los selectores que no hacen falta
@@ -224,7 +226,7 @@ en el modo actual quedan grises:
 | **You hear** | Por dónde te llega la traducción |
 | **From the app** | La captura de lo que está diciendo la app |
 
-**RESCAN** vuelve a leer la lista de dispositivos, tocalo después de enchufar
+**BUSCAR DE NUEVO** vuelve a leer la lista de dispositivos, tocalo después de enchufar
 algo. Elegí siempre por nombre y nunca por índice: Windows renumera los índices
 cada vez que cambia un dispositivo por defecto, y los propios adaptadores de
 chasqui cambian esos valores al arrancar.

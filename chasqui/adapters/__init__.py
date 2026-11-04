@@ -24,7 +24,8 @@ ADAPTER_PATHS: dict[str, str] = {
 
 ADAPTER_NAMES: list[str] = list(ADAPTER_PATHS)
 
-# One-line descriptions, shown in the UI's mode picker.
+# One-line descriptions of every adapter. The window words its three modes in
+# ui/strings.py, in the user's language.
 ADAPTER_LABELS: dict[str, str] = {
     "headset":     "Headset — bidirectional, any app (recommended)",
     "meet":        "Meet / Zoom / Teams — bidirectional, two cables",
@@ -35,11 +36,12 @@ ADAPTER_LABELS: dict[str, str] = {
     "text":        "Text — keyboard in, terminal out",
 }
 
-# Adapters the GUI can drive. The text adapter is a blocking stdin REPL, so it
-# has nothing to read from in a windowed session.
-UI_ADAPTER_NAMES: list[str] = [
-    "headset", "meet", "bridge", "virtual-mic", "media", "device",
-]
+# Adapters the GUI offers, in picker order: the three ways of using chasqui
+# the landing promises. The text adapter is a blocking stdin REPL, so it has
+# nothing to read from in a windowed session; bridge, virtual-mic and device
+# are setups for people who already know their audio routing, and seven
+# options was a question a newcomer could not answer. All stay in the CLI.
+UI_ADAPTER_NAMES: list[str] = ["headset", "media", "meet"]
 
 
 def get_adapter_class(name: str) -> type["BaseAdapter"]:
