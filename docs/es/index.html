@@ -217,7 +217,7 @@
   html[lang="en"] .langs [data-set="en"], html[lang="es"] .langs [data-set="es"] { background: var(--accent); color: var(--on-accent); }
 
   .hero {
-    display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center;
+    display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 40px; align-items: center;
     padding: 40px 0 56px;
   }
   .tag { display: block; font: 12px var(--mono); color: var(--spine); letter-spacing: .2em; text-transform: uppercase; margin: 0 0 14px; }
@@ -355,7 +355,7 @@
   footer .quote { font-family: var(--sans); font-style: italic; color: #8a96a8; margin-bottom: 16px; }
 
   @media (max-width: 760px) {
-    .hero, .costgrid { grid-template-columns: 1fr; }
+    .hero, .costgrid { grid-template-columns: minmax(0, 1fr); }
     .modes { grid-template-columns: 1fr; }
     ul.need, .faq { grid-template-columns: 1fr; }
     nav a.opt { display: none; }
