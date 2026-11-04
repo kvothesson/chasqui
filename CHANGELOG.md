@@ -6,6 +6,8 @@ What changed for people who use chasqui. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-04
+
 ### Changed
 
 - **The window speaks Spanish** when Windows does, English otherwise
@@ -74,6 +76,7 @@ The commands are still `chasqui` and `chasqui-ui`.
 - `chasqui check` (round trip without audio hardware), `chasqui devices`,
   `chasqui langs`, `chasqui translate`, `chasqui init`.
 
-[Unreleased]: https://github.com/kvothesson/chasqui/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/kvothesson/chasqui/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/kvothesson/chasqui/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/kvothesson/chasqui/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/kvothesson/chasqui/releases/tag/v0.2.0
